@@ -1,0 +1,22 @@
+[
+  {
+    "id": "page-test-001",
+    "name": "Test Page",
+    "slug": "test",
+    "description": "Demo page — enter 3 characters and generate a short AI story",
+    "variables": [
+      {
+        "name": "character1",
+        "description": "First character name"
+      },
+      {
+        "name": "character2",
+        "description": "Second character name"
+      },
+      {
+        "name": "character3",
+        "description": "Third character name"
+      }
+    ]
+  }
+]

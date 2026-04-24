@@ -1,0 +1,123 @@
+# Project Scaffold — Cursor Rules
+# Last updated: auto-maintained. If your change affects architecture, stack, auth, data,
+# routing, env vars, or any public-facing interface → update HANDOFF.md immediately.
+
+## ⚠️ HANDOFF.md is a living document
+Whenever you make a change that affects any of the following, you MUST update HANDOFF.md:
+- Project structure or file locations
+- Auth logic or session handling
+- Data shape (users.json, pages.json, prompts.json)
+- Environment variables
+- API routes (adding, removing, changing method/path)
+- Admin UI capabilities
+- Page routing conventions
+- Deployment or build process
+- Any new dependency added to package.json
+
+Do not skip this. HANDOFF.md is the source of truth for any engineer picking this up.
+
+---
+
+## Stack
+- Next.js 14, App Router
+- TypeScript
+- Tailwind CSS (utility-first, no component libraries)
+- Flat JSON files for persistence (/data/*.json)
+- JWT in httpOnly cookies for auth
+- Anthropic SDK for AI (key in .env.local)
+
+---
+
+## Design System
+
+### Typography
+- Font: Inter (Google Fonts), weights 300/400/500
+- Default body weight: 300
+- Fallback: sans-serif
+
+### Color Tokens (use CSS variables, never hardcode colors)
+All colors via hsl(var(--token)) pattern.
+Light mode on :root, dark mode on .dark class.
+
+Key tokens: --background, --foreground, --card, --primary, --secondary,
+--muted, --accent, --destructive, --border, --input, --ring, --sidebar-*
+
+### Border Radius
+- --radius: 0.5rem
+- lg: var(--radius), md: calc(var(--radius) - 2px), sm: calc(var(--radius) - 4px)
+
+### Layout Rules
+- Max content width: 1080px (max-w-[1080px]) on ALL pages and layouts
+- This applies to page content AND navigation/header elements
+- Always center constrained content with mx-auto
+- Full-bleed backgrounds are fine; only the inner content wrapper is capped
+
+### Aesthetic Rules
+- Monochromatic soft grey palette, no strong accent colors
+- Subtle shadows only (shadow-sm), never deep/harsh
+- Thin borders using --border on all containers and inputs
+- Hover: subtle background shift
+- Focus: focus-visible:ring-1 focus-visible:ring-ring
+- Transitions: 0.2s ease-out on interactive elements
+- Icons: Lucide React, w-4 h-4 standard, w-3.5 h-3.5 compact
+- Spacing: px-4 py-2, gap-2 as base units
+
+---
+
+## File & Folder Conventions
+- /app — Next.js App Router pages and layouts
+- /app/admin/* — Admin-only routes (middleware-protected)
+- /app/(auth)/login — Login page
+- /app/test — Demo user-facing page
+- /components/ui — Reusable UI primitives
+- /components/admin — Admin-specific components
+- /data/*.json — Flat file persistence (committed to repo)
+- /lib/auth.ts — JWT creation, verification, session helpers
+- /lib/data.ts — Read/write helpers for JSON data files
+- /lib/prompts.ts — Prompt resolution and variable interpolation
+
+---
+
+## Auth Rules
+- Admin: role "admin" in users.json
+- Users: role "user", access scoped to allowedPages[] in their record
+- JWT stored in httpOnly cookie named "session"
+- Middleware at /middleware.ts protects /admin/* and scoped user pages
+- JWT_SECRET lives in env only, never in source
+
+---
+
+## Data Rules
+- Never hardcode prompts, users, or page configs in source code
+- All prompts live in /data/prompts.json, edited only via Admin UI
+- All page definitions in /data/pages.json
+- All users in /data/users.json
+- Writes go through /lib/data.ts — never fs directly in route handlers
+- Data files are committed and deployed — they ARE the database
+
+---
+
+## AI / Prompt Rules
+- ANTHROPIC_API_KEY in .env.local only, never committed
+- Prompts fetched at runtime from prompts.json, never hardcoded
+- Variables use {{variableName}} syntax
+- Interpolation happens server-side in /lib/prompts.ts
+- Users never see raw prompt text
+
+---
+
+## API Route Conventions
+- All routes under /app/api/
+- Auth: /api/auth/login, /api/auth/logout
+- Admin: /api/admin/* (middleware-protected)
+- AI execution: /api/run-prompt
+- Response shape: { success: boolean, data?, error? }
+
+---
+
+## Code Style
+- TypeScript strict mode, no any types
+- Functional components only
+- Server Components by default; "use client" only when needed
+- Named exports for components, default exports for pages
+- Keep route handlers thin — logic in /lib

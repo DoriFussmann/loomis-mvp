@@ -1,0 +1,21 @@
+[
+  {
+    "id": "admin-001",
+    "name": "Admin",
+    "email": "admin@admin.com",
+    "passwordHash": "$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi",
+    "role": "admin",
+    "allowedPages": []
+  },
+  {
+    "id": "user-001",
+    "name": "User",
+    "email": "user@example.com",
+    "passwordHash": "$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi",
+    "role": "user",
+    "allowedPages": [
+      "another-testing-page",
+      "test"
+    ]
+  }
+]

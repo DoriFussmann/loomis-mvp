@@ -1,0 +1,10 @@
+[
+  {
+    "id": "prompt-story-001",
+    "name": "Character Story",
+    "pageSlug": "test",
+    "template": "Write a short, engaging story of exactly 200 words featuring three characters: {{character1}}, {{character2}}, and {{character3}}. Make it imaginative and fun.",
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z"
+  }
+]
