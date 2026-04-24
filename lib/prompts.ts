@@ -18,5 +18,5 @@ export function interpolatePrompt(
  */
 export function extractVariables(template: string): string[] {
   const matches = template.matchAll(/\{\{(\w+)\}\}/g);
-  return [...new Set([...matches].map((m) => m[1]))];
+  return Array.from(new Set([...matches].map((m) => m[1])));
 }
