@@ -17,6 +17,11 @@ export function interpolatePrompt(
  * Used in Admin UI to show which variables a template uses.
  */
 export function extractVariables(template: string): string[] {
-  const matches = template.matchAll(/\{\{(\w+)\}\}/g);
-  return Array.from(new Set([...matches].map((m) => m[1])));
+  const regex = /\{\{(\w+)\}\}/g;
+  const results: string[] = [];
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(template)) !== null) {
+    results.push(match[1]);
+  }
+  return Array.from(new Set(results));
 }
