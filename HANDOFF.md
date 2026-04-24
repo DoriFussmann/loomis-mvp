@@ -362,6 +362,5 @@ npm run dev
 ## Contacts / Ownership
 
 - Project owner: Dori / The Night Ventures
-- Repository: https://github.com/DoriFussmann/loomis-mvp
 - Vercel project: (fill in)
 - Domain / DNS: epicaiproducts.com (fill in Vercel domain config)
