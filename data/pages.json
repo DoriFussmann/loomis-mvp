@@ -1,5 +1,12 @@
 [
   {
+    "id": "loss-run-analyzer",
+    "name": "Loss Run Analyzer",
+    "slug": "loss-run-analyzer",
+    "description": "Upload a loss run PDF to extract structured claims data.",
+    "variables": []
+  },
+  {
     "id": "page-test-001",
     "name": "Test Page",
     "slug": "test",

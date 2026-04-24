@@ -6,10 +6,11 @@
 
 ## What This Is
 
-A lightweight multi-user web application with:
+A lightweight multi-user web application built for **Loomis Insurance** with:
 - An **Admin zone** for managing users, pages, and AI prompts
 - **User-facing pages** with access controlled per-user by the admin
 - **AI-powered interactions** driven entirely by prompts configured in the Admin UI (never hardcoded)
+- A **Loss Run Analyzer** — the primary production feature: upload any loss run PDF, get a structured report + Excel export
 - A **demo flow**: Home → Test page where users input 3 characters and get a short AI-generated story
 
 ---
@@ -20,10 +21,11 @@ A lightweight multi-user web application with:
 |---|---|---|
 | Framework | Next.js 14 (App Router) | Vercel-native, unified frontend + API |
 | Language | TypeScript (strict) | Type safety, maintainability |
-| Styling | Tailwind CSS | Matches design system spec |
+| Styling | Tailwind CSS + inline styles | Matches design system spec; inline styles used where CSS variables require `hsl()` wrapping |
 | Auth | JWT in httpOnly cookies | Simple, self-contained, no DB |
 | Persistence | Flat JSON files in `/data/` | No DB setup, committed to repo |
-| AI | Anthropic SDK (`claude-sonnet-4-20250514`) | Prompt execution |
+| AI | Anthropic SDK (`claude-sonnet-4-20250514`) | Two-stage PDF extraction |
+| Excel Export | `xlsx` npm package | Client-side Excel generation |
 | Deployment | Vercel (GitHub integration) | Zero-config, works with App Router |
 
 ---
@@ -33,53 +35,144 @@ A lightweight multi-user web application with:
 ```
 /
 ├── app/
-│   ├── layout.tsx                  # Root layout, font, theme
-│   ├── page.tsx                    # Home page → dynamically lists pages the logged-in user can access
+│   ├── layout.tsx
+│   ├── page.tsx                          # Home — lists pages the logged-in user can access
 │   ├── (auth)/
-│   │   └── login/
-│   │       └── page.tsx            # Login page (all users)
+│   │   └── login/page.tsx
 │   ├── admin/
-│   │   ├── layout.tsx              # Admin shell layout + sidebar (max-w-[1080px] applied here)
-│   │   ├── page.tsx                # Admin dashboard
+│   │   ├── layout.tsx
+│   │   ├── page.tsx
 │   │   ├── users/
-│   │   │   ├── page.tsx            # User management (add/edit/reset password/permissions)
-│   │   │   └── [id]/page.tsx       # Edit individual user
+│   │   │   ├── page.tsx
+│   │   │   └── [id]/page.tsx
 │   │   └── pages/
-│   │       ├── page.tsx            # Pages & Prompts list (add page)
-│   │       └── [id]/page.tsx       # Page detail: left = page fields/variables, right = prompts panel
+│   │       ├── page.tsx
+│   │       └── [id]/page.tsx
+│   ├── loss-run-analyzer/
+│   │   └── page.tsx                      # Loss Run Analyzer — primary production feature
 │   └── test/
-│       └── page.tsx                # Demo user-facing page (3 characters → AI story)
+│       └── page.tsx                      # Demo page
 ├── components/
-│   ├── ui/                         # Reusable primitives (Button, Input, Card, Label, etc.)
-│   └── admin/                      # Admin-specific components (UserTable, PromptEditor, etc.)
+│   ├── ui/                               # Reusable primitives
+│   └── admin/                            # Admin-specific components
 ├── data/
-│   ├── users.json                  # All user records (committed)
-│   ├── pages.json                  # Page registry (committed)
-│   └── prompts.json                # All AI prompts (committed)
+│   ├── users.json
+│   ├── pages.json
+│   └── prompts.json
 ├── lib/
-│   ├── auth.ts                     # JWT sign/verify, session read, password hash (bcrypt)
-│   ├── data.ts                     # Type-safe read/write helpers for all JSON files
-│   └── prompts.ts                  # Prompt lookup, {{variable}} interpolation
+│   ├── auth.ts                           # JWT sign/verify, session read, password hash
+│   ├── data.ts                           # Type-safe read/write helpers for JSON files
+│   ├── prompts.ts                        # Prompt lookup, {{variable}} interpolation
+│   └── exportToExcel.ts                  # Client-side Excel export for loss run reports
 ├── app/api/
 │   ├── auth/
-│   │   ├── login/route.ts          # POST — validates credentials, sets session cookie
-│   │   └── logout/route.ts         # POST — clears session cookie
+│   │   ├── login/route.ts
+│   │   └── logout/route.ts
 │   ├── admin/
-│   │   ├── users/route.ts          # GET/POST — list and create users
-│   │   ├── users/[id]/route.ts     # PUT/DELETE — edit or remove a user
-│   │   ├── pages/route.ts          # GET/POST — list and create pages
-│   │   ├── pages/[id]/route.ts     # PUT/DELETE — edit or remove a page
-│   │   ├── prompts/route.ts        # GET/POST — list and create prompts
-│   │   └── prompts/[id]/route.ts   # PUT/DELETE — edit or remove a prompt
-│   └── run-prompt/route.ts         # POST — executes a prompt with user inputs via Anthropic
-├── middleware.ts                   # Route protection (admin role, page-level user access)
-├── .cursorrules                    # AI coding rules — read before making changes
-├── .env.local                      # Local secrets (NOT committed — see Env Vars section)
-├── .env.example                    # Template for required env vars (committed)
-├── tailwind.config.ts              # Design system tokens wired into Tailwind
-├── globals.css                     # CSS variables (light/dark), base styles
-└── HANDOFF.md                      # This file
+│   │   ├── users/route.ts
+│   │   ├── users/[id]/route.ts
+│   │   ├── pages/route.ts
+│   │   ├── pages/[id]/route.ts
+│   │   ├── prompts/route.ts
+│   │   └── prompts/[id]/route.ts
+│   ├── analyze-loss-run/
+│   │   └── route.ts                      # POST — two-stage PDF extraction via Anthropic
+│   └── run-prompt/route.ts
+├── middleware.ts                          # Route protection
+├── .cursorrules
+├── .env                                   # Secrets (NOT committed)
+├── .env.example
+├── tailwind.config.ts
+├── globals.css
+└── HANDOFF.md
 ```
+
+---
+
+## Loss Run Analyzer — Full Feature Documentation
+
+### What it does
+Accepts any insurance loss run PDF, runs a two-stage AI extraction, and produces:
+- A structured visual report in the browser (summary cards, year-over-year chart, coverage breakdown, large claims table, observations)
+- A downloadable Excel file with 4–6 tabs depending on coverage types present
+
+### Supported input formats
+Three formats have been validated:
+| Format | Example | Coverage |
+|---|---|---|
+| WC claim-level detail | Just Ducky Farms (AF Group) | Workers Comp |
+| Package auto/property | Joe's Duck Farm (Penn Millers) | Auto + Property |
+| Auto/GL package | Construction Masters (Cincinnati) | Auto + GL |
+
+### Two-stage extraction architecture
+
+**Why two stages:** A single prompt trying to detect format AND extract data produces hallucinated fields. The classifier creates a contract — the extractor only attempts what the contract explicitly allows.
+
+**Stage 1 — CLASSIFIER** (`/api/analyze-loss-run/route.ts`)
+- Reads the PDF and returns a metadata JSON object
+- Identifies: insured name, carrier, document format, coverage lines, policy years, valuation date, available fields (has_claim_numbers, has_body_part, has_reserves, etc.)
+- Max tokens: 1000
+- If classifier returns unparseable JSON → error returned, extraction aborted
+
+**Stage 2 — EXTRACTOR**
+- Receives classifier output as context + same PDF
+- Only populates sections the classifier confirmed exist
+- `wc_detail` is null unless `workers_comp` is in coverage_lines
+- `auto_gl_detail` is null unless `auto` or `general_liability` is in coverage_lines
+- Max tokens: 8000
+- If extractor returns unparseable JSON → returns classifier + raw text for debugging
+
+**Output schema:**
+```typescript
+{
+  insured_name, carrier, valued_as_of, coverage_lines,
+  loss_summary: { total_claims, open_claims, closed_claims, total_paid, total_reserves, total_incurred, avg_cost_per_claim },
+  by_year: [{ year, claim_count, total_paid, total_reserves, total_incurred, open_claims, closed_claims }],
+  by_coverage_line: [{ line, claim_count, total_incurred, top_causes: [{ cause, claim_count, total_incurred }] }],
+  wc_detail: null | { injury_breakdown, top_body_parts, open_vs_closed, large_claims, summary },
+  auto_gl_detail: null | { loss_types, large_claims, summary },
+  observations: string[],
+  data_quality_notes: string | null
+}
+```
+
+### API Route
+**`POST /api/analyze-loss-run`**
+- Auth: protected by middleware (valid session required, no role check)
+- Body: `{ fileBase64: string, mediaType: "application/pdf", clientName?: string, clientCompany?: string }`
+- Response: `{ success: true, data: { classifier, report, meta } }`
+- PDF sent as base64 document block to Anthropic API
+
+### Page flow (`app/loss-run-analyzer/page.tsx`)
+1. Upload form (optional client name/company + PDF file picker)
+2. Analyze → two API calls happen sequentially
+3. Post-analysis view: classifier summary card + collapsed raw JSON panel + "Copy JSON" button + "Continue to Report →"
+4. Report view: full visual report with Download Excel button in header
+
+### Excel export (`lib/exportToExcel.ts`)
+Client-side only — no server round trip. Uses `xlsx` npm package.
+Tabs generated (conditionally):
+- **Summary** — always present
+- **By Year** — if by_year has data
+- **By Coverage Line** — if by_coverage_line has data
+- **Large Claims** — if wc or auto/GL large claims exist
+- **WC Detail** — only if wc_detail is non-null
+- **Observations** — always present
+
+### Rate limit consideration
+Anthropic API tier 1 limit is 30K input tokens/minute. Two sequential calls on large PDFs (32+ pages) will hit this limit. Current workaround: use trimmed PDFs for testing. Production fix: upgrade Anthropic account tier, or add a 60-second delay between classifier and extractor calls.
+
+### CSS variable usage — important
+All inline styles must wrap CSS variables in `hsl()`:
+```typescript
+// CORRECT
+border: `1px solid hsl(var(--border))`
+background: `hsl(var(--muted))`
+
+// WRONG — renders as invalid CSS
+border: `1px solid var(--border)`
+```
+This is because the design system uses raw HSL values without the wrapper (e.g., `35 12% 88%`).
 
 ---
 
@@ -102,7 +195,7 @@ A lightweight multi-user web application with:
     "email": "john@example.com",
     "passwordHash": "bcrypt-hash",
     "role": "user",
-    "allowedPages": ["test", "another-page-slug"]
+    "allowedPages": ["loss-run-analyzer", "test"]
   }
 ]
 ```
@@ -112,39 +205,19 @@ A lightweight multi-user web application with:
 [
   {
     "id": "uuid-v4",
-    "name": "Test Page",
-    "slug": "test",
-    "description": "Demo page with character story generator",
-    "variables": [
-      { "name": "character1", "description": "First character name" },
-      { "name": "character2", "description": "Second character name" },
-      { "name": "character3", "description": "Third character name" }
-    ]
+    "name": "Loss Run Analyzer",
+    "slug": "loss-run-analyzer",
+    "description": "Upload a loss run PDF to extract structured claims data and generate a client-ready report.",
+    "variables": []
   }
 ]
 ```
-
-### `/data/prompts.json`
-```json
-[
-  {
-    "id": "uuid-v4",
-    "name": "Character Story",
-    "pageSlug": "test",
-    "template": "Write a short story of exactly 200 words featuring three characters: {{character1}}, {{character2}}, and {{character3}}. Make it engaging and fun.",
-    "createdAt": "ISO-8601",
-    "updatedAt": "ISO-8601"
-  }
-]
-```
-
-**Variable syntax:** `{{variableName}}` — interpolated server-side before sending to Anthropic. Variable names must match entries in the page's `variables[]` array.
 
 ---
 
 ## Environment Variables
 
-### Required in `.env.local` (never commit this file)
+### Required in `.env` (never commit)
 ```
 ANTHROPIC_API_KEY=sk-ant-...
 JWT_SECRET=a-long-random-string-minimum-32-chars
@@ -158,6 +231,8 @@ JWT_SECRET=
 
 **Generate JWT_SECRET:** `openssl rand -base64 32`
 
+**Important:** If JWT_SECRET changes, all existing sessions are invalidated. Users must log out and log back in.
+
 ---
 
 ## Authentication & Authorization
@@ -168,17 +243,24 @@ JWT_SECRET=
 3. On success: signs JWT `{ id, email, role, allowedPages }` with `JWT_SECRET`, sets as httpOnly cookie `session` (7-day expiry)
 4. `middleware.ts` runs on every request:
    - `/admin/*` → requires `role === "admin"`, redirects to `/login` otherwise
-   - `/test` (and other user pages) → requires valid session + page slug in `allowedPages[]` (read from JWT)
-   - `/api/admin/*` → same admin check, returns 401 JSON instead of redirect
-5. Logout (`POST /api/auth/logout`) clears the cookie and redirects to `/login`
+   - `/api/admin/*` → same admin check, returns 401 JSON
+   - `/api/analyze-loss-run` → requires valid session (any role)
+   - `/loss-run-analyzer`, `/test` → requires valid session + slug in `allowedPages[]`
+5. Logout clears cookie, redirects to `/login`
+
+### middleware.ts matcher
+```typescript
+export const config = {
+  matcher: ["/admin/:path*", "/api/admin/:path*", "/api/analyze-loss-run", "/test", "/loss-run-analyzer"],
+}
+```
 
 ### Password Reset
-Admin sets a new password via Admin UI → `/api/admin/users/[id]` PUT with `{ password }` → hashed with bcrypt, stored in `users.json`. No email flow — admin communicates new password directly.
+Admin sets new password via Admin UI → PUT `/api/admin/users/[id]` with `{ password }` → bcrypt hashed, stored in `users.json`.
 
 ### Default Admin Account
-Seeded in `users.json` on first deploy:
 - Email: `admin@admin.com`
-- Password: `changeme` (change immediately)
+- Password: `changeme` — **change immediately on first deploy**
 
 ---
 
@@ -192,7 +274,7 @@ All responses: `{ success: boolean, data?: any, error?: string }`
 | POST | `/api/auth/logout` | Any | Clears session cookie |
 | GET | `/api/admin/users` | Admin | List all users |
 | POST | `/api/admin/users` | Admin | Create user |
-| PUT | `/api/admin/users/[id]` | Admin | Update user (name, email, password, role, allowedPages) |
+| PUT | `/api/admin/users/[id]` | Admin | Update user |
 | DELETE | `/api/admin/users/[id]` | Admin | Delete user |
 | GET | `/api/admin/pages` | Admin | List all pages |
 | POST | `/api/admin/pages` | Admin | Create page |
@@ -203,65 +285,30 @@ All responses: `{ success: boolean, data?: any, error?: string }`
 | PUT | `/api/admin/prompts/[id]` | Admin | Update prompt |
 | DELETE | `/api/admin/prompts/[id]` | Admin | Delete prompt |
 | POST | `/api/run-prompt` | User (page access) | Run a prompt with variable inputs |
-
----
-
-## Prompt System (Critical)
-
-**Rule:** Prompts are NEVER in source code. They live exclusively in `/data/prompts.json` and are managed via the Admin UI.
-
-**How a prompt runs:**
-1. User fills form on a page (e.g., 3 character names)
-2. Frontend POSTs to `/api/run-prompt` with `{ promptId, variables: { character1: "...", ... } }`
-3. Server loads prompt from `prompts.json`
-4. `/lib/prompts.ts` interpolates `{{variable}}` placeholders with actual values
-5. Resolved string is sent to Anthropic API
-6. Response streamed back to client
-
-**Variable Inspector (Admin UI):**
-In the Pages & Prompts detail view (right panel), when adding or editing a prompt, the UI shows all `variables[]` defined for that page. Admin can click any variable chip to insert `{{variableName}}` at the cursor position in the template. No page selector is needed since prompts are always created in the context of their page.
-
----
-
-## Adding a New Page (Process)
-
-1. **Admin UI → Pages & Prompts → Add Page**: fill name, slug, description, define variables → writes to `/data/pages.json`
-2. Create the actual Next.js page at `/app/[slug]/page.tsx` (see `/app/test/page.tsx` as reference)
-3. Add the slug to the `protectedPages` array in `middleware.ts` so it is access-controlled
-4. **Admin UI → Pages & Prompts → click the page → right panel → Add Prompt**: write the template using `{{variableName}}` chips
-5. **Admin UI → Users → edit user**: add the new slug to their `allowedPages`
-6. Update `HANDOFF.md` with the new page details
+| POST | `/api/analyze-loss-run` | User (session) | Two-stage loss run PDF extraction |
 
 ---
 
 ## Design System Summary
 
-Full spec in `.cursorrules`. Key points:
 - **Font:** Inter 300/400/500 from Google Fonts
-- **Colors:** All via CSS custom properties (`hsl(var(--token))`), never hardcoded
+- **Colors:** All via CSS custom properties (`hsl(var(--token))`), never hardcoded inline
 - **Theme:** Light by default; dark mode via `.dark` class on `<html>`
-- **Radius:** Base `0.5rem`, component variants lg/md/sm
-- **Shadows:** `shadow-sm` max — never heavy
+- **Radius:** Base `0.5rem`
+- **Shadows:** `shadow-sm` max
 - **Icons:** Lucide React throughout
+- **Inline styles:** Use `hsl(var(--token))` syntax — raw `var(--token)` will not render correctly
 
 ---
 
 ## Local Development
 
 ```bash
-# Install
 npm install
-
-# Set up env
-cp .env.example .env.local
-# Fill in ANTHROPIC_API_KEY and JWT_SECRET
-
-# Run
+# ensure .env has ANTHROPIC_API_KEY and JWT_SECRET
 npm run dev
 # → http://localhost:3000
-
-# Login
-# admin@admin.com / changeme
+# Login: admin@admin.com / changeme
 ```
 
 ---
@@ -273,30 +320,48 @@ npm run dev
 3. Add env vars in Vercel project settings:
    - `ANTHROPIC_API_KEY`
    - `JWT_SECRET`
-4. Deploy — zero config needed, Next.js is auto-detected
+4. Deploy — zero config, Next.js auto-detected
 
-**Note on flat files:** `/data/*.json` are committed to the repo and deployed with the build. Writes via the Admin UI mutate these files on the server filesystem. On Vercel's serverless/edge this works for low-traffic use — the files persist within a deployment but reset on redeploy. For production persistence beyond a demo, migrate to a database (Postgres via Vercel, or Supabase).
+**Note on flat files:** `/data/*.json` are committed and deployed with the build. Admin UI writes mutate the server filesystem. On Vercel serverless this works for low-traffic use but resets on redeploy. For production persistence, migrate to Postgres or Supabase.
 
 ---
 
-## Known Limitations & Future Considerations
+## Known Limitations & Next Steps
 
 | Item | Current State | Suggested Fix |
 |---|---|---|
-| Persistence | Flat JSON files reset on redeploy | Add Postgres/Supabase |
+| Rate limits | 30K tokens/min hits on 32+ page PDFs | Upgrade Anthropic tier or add delay between classifier/extractor |
+| Persistence | Flat JSON resets on redeploy | Add Postgres/Supabase |
 | Password reset | Admin manual only | Add email flow (Resend/SendGrid) |
-| Prompt versioning | None | Add history/audit log to prompts.json |
-| File uploads | Not supported | Add S3/Vercel Blob if needed |
-| Rate limiting | None on AI route | Add middleware rate limiting |
-| Streaming | Full response, not streamed | Switch to Vercel AI SDK streaming |
+| Multi-file upload | Single PDF only | Combine classifier outputs, send all PDFs to one extractor call |
+| Excel styling | Basic — no charts | Add chart sheets using xlsx chart API |
+| Benchmarking | Removed (no reliable data source) | Add if Loomis provides benchmark data |
+| Streaming | Full response only | Switch to Vercel AI SDK streaming for better UX on large files |
+
+---
+
+## Client Context — Loomis Insurance
+
+- **James** — owner/decision maker (son of founder). Responds to demos, asked for Excel export specifically.
+- **Michelle** — account management, originated the loss run request, defines requirements.
+- **Jon** — internal contact who brought this project in.
+- **Sheri** — account management, sends sample files.
+
+**What they want:** Drop loss run PDFs in → get client-ready reports without manual work. Currently takes many man-hours to produce these reports manually.
+
+**Key signal from James:** He forwarded the first demo internally and asked for Excel output unprompted. That's the green light.
+
+**Next likely asks:**
+- Multi-year package loss runs with many lines of business
+- Benchmarking against industry averages (they'll need to provide data)
+- More polished output matching their existing report style (Example.pdf in repo)
+- User accounts for individual brokers/clients
 
 ---
 
 ## Contacts / Ownership
 
-*Fill in before handoff:*
-- Project owner:
-- Original developer:
-- Repository:
-- Vercel project:
-- Domain / DNS:
+- Project owner: Dori / The Night Ventures
+- Repository: https://github.com/DoriFussmann/loomis-mvp
+- Vercel project: (fill in)
+- Domain / DNS: epicaiproducts.com (fill in Vercel domain config)

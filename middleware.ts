@@ -7,6 +7,7 @@ const SECRET = new TextEncoder().encode(
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  console.log("[middleware] cookies:", request.cookies.getAll());
   const token = request.cookies.get("session")?.value;
 
   // Verify token
@@ -15,10 +16,13 @@ export async function middleware(request: NextRequest) {
     try {
       const { payload } = await jwtVerify(token, SECRET);
       session = payload;
-    } catch {
+    } catch (err) {
+      console.log("[middleware] jwtVerify error:", err);
       session = null;
     }
   }
+
+  console.log("[middleware]", { pathname, session });
 
   // Admin routes — require admin role
   if (pathname.startsWith("/admin")) {
@@ -36,8 +40,16 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Protected API routes — require any valid session
+  if (pathname.startsWith("/api/analyze-loss-run")) {
+    if (!session) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
+    return NextResponse.next();
+  }
+
   // Protected user pages (add slugs here as you add pages)
-  const protectedPages = ["/test"];
+  const protectedPages = ["/test", "/loss-run-analyzer"];
   if (protectedPages.includes(pathname)) {
     if (!session) {
       return NextResponse.redirect(new URL("/login", request.url));
@@ -56,5 +68,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/api/admin/:path*", "/test"],
+  matcher: ["/admin/:path*", "/api/admin/:path*", "/api/analyze-loss-run", "/test"],
 };

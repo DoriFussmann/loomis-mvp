@@ -15,7 +15,8 @@
     "role": "user",
     "allowedPages": [
       "another-testing-page",
-      "test"
+      "test",
+      "loss-run-analyzer"
     ]
   }
 ]
