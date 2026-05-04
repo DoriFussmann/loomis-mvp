@@ -290,30 +290,165 @@ function buildWCSheet(report: any): XLSX.WorkSheet | null {
     [],
     ['', wc.summary],
     [],
-    ['', 'INJURY BREAKDOWN'],
-    [],
-    ['', 'Cause of Injury', 'Body Parts', 'Claims', 'Total Incurred ($)', 'Avg Cost ($)'],
-    ...(wc.injury_breakdown ?? []).map((r: any) => [
-      '',
-      r.cause,
-      r.body_parts?.join(', ') ?? '—',
-      r.claim_count,
-      r.total_incurred ?? 0,
-      r.avg_cost ?? 0,
-    ]),
-    [],
-    ['', 'OPEN vs CLOSED'],
-    [],
-    ['', 'Status', 'Count', 'Total Incurred ($)'],
-    ['', 'Open', wc.open_vs_closed?.open_count ?? '—', wc.open_vs_closed?.open_incurred ?? 0],
-    ['', 'Closed', wc.open_vs_closed?.closed_count ?? '—', wc.open_vs_closed?.closed_incurred ?? 0],
   ]
+
+  // Financials
+  if (wc.financials) {
+    aoa.push(['', 'FINANCIALS'])
+    aoa.push([])
+    aoa.push(['', 'Type', 'Paid ($)', 'Reserve ($)', 'Total ($)'])
+    aoa.push(['', 'Indemnity', wc.financials.indemnity?.paid ?? 0, wc.financials.indemnity?.reserve ?? 0, wc.financials.indemnity?.total ?? 0])
+    aoa.push(['', 'Medical', wc.financials.medical?.paid ?? 0, wc.financials.medical?.reserve ?? 0, wc.financials.medical?.total ?? 0])
+    aoa.push(['', 'Expense', wc.financials.expense?.paid ?? 0, wc.financials.expense?.reserve ?? 0, wc.financials.expense?.total ?? 0])
+    aoa.push([])
+  }
+
+  // Claim type split
+  if (wc.claim_type_split) {
+    aoa.push(['', 'CLAIM TYPES'])
+    aoa.push([])
+    aoa.push(['', 'Type', 'Count'])
+    aoa.push(['', 'Indemnity', wc.claim_type_split.indemnity_count ?? '—'])
+    aoa.push(['', 'Medical Only', wc.claim_type_split.medical_only_count ?? '—'])
+    aoa.push(['', 'Incident Only', wc.claim_type_split.incident_only_count ?? '—'])
+    aoa.push([])
+  }
+
+  // Litigated
+  if (wc.litigated_claims) {
+    aoa.push(['', 'LITIGATED CLAIMS'])
+    aoa.push([])
+    aoa.push(['', 'Count', wc.litigated_claims.count ?? '—'])
+    aoa.push(['', 'Total Incurred ($)', wc.litigated_claims.total_incurred ?? 0])
+    aoa.push([])
+  }
+
+  // Reporting lag
+  if (wc.reporting_lag) {
+    aoa.push(['', 'REPORTING LAG'])
+    aoa.push([])
+    aoa.push(['', 'Avg Days to Report', wc.reporting_lag.avg_days ?? '—'])
+    aoa.push(['', '0–3 Days', wc.reporting_lag.within_3_days ?? '—'])
+    aoa.push(['', '4–10 Days', wc.reporting_lag.days_4_to_10 ?? '—'])
+    aoa.push(['', '11+ Days', wc.reporting_lag.days_11_plus ?? '—'])
+    if (wc.reporting_lag.note) aoa.push(['', wc.reporting_lag.note])
+    aoa.push([])
+  }
+
+  // Injury breakdown
+  if (wc.injury_breakdown?.length > 0) {
+    aoa.push(['', 'CAUSE OF INJURY'])
+    aoa.push([])
+    aoa.push(['', 'Cause', 'Body Parts', 'Claims', 'Total Incurred ($)', 'Avg Cost ($)'])
+    wc.injury_breakdown.forEach((r: any) => {
+      aoa.push(['', r.cause, r.body_parts?.join(', ') ?? '—', r.claim_count, r.total_incurred ?? 0, r.avg_cost ?? 0])
+    })
+    aoa.push([])
+  }
+
+  // Top body parts
+  if (wc.top_body_parts?.length > 0) {
+    aoa.push(['', 'TOP BODY PARTS'])
+    aoa.push([])
+    aoa.push(['', 'Body Part', 'Claims', 'Total Incurred ($)'])
+    wc.top_body_parts.forEach((r: any) => {
+      aoa.push(['', r.body_part, r.claim_count, r.total_incurred ?? 0])
+    })
+    aoa.push([])
+  }
+
+  // By age
+  if (wc.by_age_at_injury?.length > 0) {
+    aoa.push(['', 'BY AGE AT INJURY'])
+    aoa.push([])
+    aoa.push(['', 'Age Bracket', 'Claims', 'Total Incurred ($)'])
+    wc.by_age_at_injury.forEach((r: any) => {
+      aoa.push(['', r.age_bracket, r.claim_count, r.total_incurred ?? 0])
+    })
+    aoa.push([])
+  }
+
+  // By month
+  if (wc.by_month?.length > 0) {
+    aoa.push(['', 'BY MONTH'])
+    aoa.push([])
+    aoa.push(['', 'Month', 'Claims', 'Total Incurred ($)'])
+    wc.by_month.forEach((r: any) => {
+      aoa.push(['', r.month, r.claim_count, r.total_incurred ?? 0])
+    })
+    aoa.push([])
+  }
+
+  // By day of week
+  if (wc.by_day_of_week?.length > 0) {
+    aoa.push(['', 'BY DAY OF WEEK'])
+    aoa.push([])
+    aoa.push(['', 'Day', 'Claims', 'Total Incurred ($)'])
+    wc.by_day_of_week.forEach((r: any) => {
+      aoa.push(['', r.day, r.claim_count, r.total_incurred ?? 0])
+    })
+    aoa.push([])
+  }
+
+  // By department
+  if (wc.by_department?.length > 0) {
+    aoa.push(['', 'BY DEPARTMENT'])
+    aoa.push([])
+    aoa.push(['', 'Department', 'Claims', 'Total Incurred ($)'])
+    wc.by_department.forEach((r: any) => {
+      aoa.push(['', r.department, r.claim_count, r.total_incurred ?? 0])
+    })
+    aoa.push([])
+  }
+
+  // By state
+  if (wc.by_state?.length > 0) {
+    aoa.push(['', 'BY STATE'])
+    aoa.push([])
+    aoa.push(['', 'State', 'Claims', 'Total Incurred ($)'])
+    wc.by_state.forEach((r: any) => {
+      aoa.push(['', r.state, r.claim_count, r.total_incurred ?? 0])
+    })
+    aoa.push([])
+  }
+
+  // Repeat claimants
+  if (wc.repeat_claimants?.length > 0) {
+    aoa.push(['', 'REPEAT CLAIMANTS'])
+    aoa.push([])
+    aoa.push(['', 'Claimant', 'Claims', 'Total Incurred ($)'])
+    wc.repeat_claimants.forEach((r: any) => {
+      aoa.push(['', r.claimant, r.claim_count, r.total_incurred ?? 0])
+    })
+    aoa.push([])
+  }
+
+  // Open vs closed
+  if (wc.open_vs_closed) {
+    aoa.push(['', 'OPEN vs CLOSED'])
+    aoa.push([])
+    aoa.push(['', 'Status', 'Count', 'Total Incurred ($)'])
+    aoa.push(['', 'Open', wc.open_vs_closed.open_count ?? '—', wc.open_vs_closed.open_incurred ?? 0])
+    aoa.push(['', 'Closed', wc.open_vs_closed.closed_count ?? '—', wc.open_vs_closed.closed_incurred ?? 0])
+    aoa.push([])
+  }
+
+  // Large claims
+  if (wc.large_claims?.length > 0) {
+    aoa.push(['', 'LARGE CLAIMS'])
+    aoa.push([])
+    aoa.push(['', 'Claimant', 'Loss Date', 'Cause', 'Body Part', 'Claim Type', 'Total Incurred ($)', 'Status'])
+    wc.large_claims.forEach((c: any) => {
+      aoa.push(['', c.claimant, c.loss_date, c.cause, c.body_part ?? '—', c.claim_type ?? '—', c.total_incurred ?? 0, c.status ?? '—'])
+    })
+    aoa.push([])
+  }
 
   const ws = XLSX.utils.aoa_to_sheet(aoa)
 
   if (ws['B2']) ws['B2'].s = { font: { bold: true, name: 'Arial', sz: 11, color: { rgb: '1C1917' } } }
 
-  setColWidths(ws, [2, 28, 35, 10, 18, 16])
+  setColWidths(ws, [2, 28, 35, 12, 18, 16, 18, 12])
   return ws
 }
 

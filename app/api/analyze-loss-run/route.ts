@@ -68,11 +68,11 @@ Rules:
     {
       "year": "<policy year label string>",
       "claim_count": <number>,
+      "open_claims": <number or null>,
+      "closed_claims": <number or null>,
       "total_paid": <number>,
       "total_reserves": <number>,
-      "total_incurred": <number>,
-      "open_claims": <number or null>,
-      "closed_claims": <number or null>
+      "total_incurred": <number>
     }
   ],
 
@@ -88,7 +88,6 @@ Rules:
   ],
 
   "wc_detail": null,
-
   "auto_gl_detail": null,
 
   "observations": [
@@ -102,8 +101,29 @@ Rules:
   "data_quality_notes": "<string or null>"
 }
 
-If the document contains workers comp data (coverage_lines includes workers_comp), replace the wc_detail null with:
+If the document contains workers comp data, replace wc_detail null with:
 {
+  "financials": {
+    "indemnity": { "paid": <number or null>, "reserve": <number or null>, "total": <number or null> },
+    "medical": { "paid": <number or null>, "reserve": <number or null>, "total": <number or null> },
+    "expense": { "paid": <number or null>, "reserve": <number or null>, "total": <number or null> }
+  },
+  "claim_type_split": {
+    "indemnity_count": <number or null>,
+    "medical_only_count": <number or null>,
+    "incident_only_count": <number or null>
+  },
+  "litigated_claims": {
+    "count": <number or null>,
+    "total_incurred": <number or null>
+  },
+  "reporting_lag": {
+    "avg_days": <number or null>,
+    "within_3_days": <number or null>,
+    "days_4_to_10": <number or null>,
+    "days_11_plus": <number or null>,
+    "note": "<plain-language observation about reporting timeliness or null>"
+  },
   "injury_breakdown": [
     {
       "cause": "<cause of injury string>",
@@ -115,6 +135,24 @@ If the document contains workers comp data (coverage_lines includes workers_comp
   ],
   "top_body_parts": [
     { "body_part": "<string>", "claim_count": <number>, "total_incurred": <number> }
+  ],
+  "by_age_at_injury": [
+    { "age_bracket": "<e.g. Under 25, 25-34, 35-44, 45-54, 55-64, 65+>", "claim_count": <number>, "total_incurred": <number> }
+  ],
+  "by_day_of_week": [
+    { "day": "<Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday>", "claim_count": <number>, "total_incurred": <number> }
+  ],
+  "by_month": [
+    { "month": "<January|February|...|December>", "claim_count": <number>, "total_incurred": <number> }
+  ],
+  "by_state": [
+    { "state": "<state name or code>", "claim_count": <number>, "total_incurred": <number> }
+  ],
+  "by_department": [
+    { "department": "<string>", "claim_count": <number>, "total_incurred": <number> }
+  ],
+  "repeat_claimants": [
+    { "claimant": "<name>", "claim_count": <number>, "total_incurred": <number> }
   ],
   "open_vs_closed": {
     "open_count": <number or null>,
@@ -129,23 +167,36 @@ If the document contains workers comp data (coverage_lines includes workers_comp
       "cause": "<string>",
       "body_part": "<string or null>",
       "total_incurred": <number>,
-      "status": "<open|closed|unknown>"
+      "status": "<open|closed|unknown>",
+      "claim_type": "<indemnity|medical_only|incident|unknown>"
     }
   ],
   "summary": "<2-3 sentence plain-language summary of WC loss pattern>"
 }
 
-If the document contains auto or general liability data, replace the auto_gl_detail null with:
+If the document contains auto or general liability data, replace auto_gl_detail null with:
 {
+  "reporting_lag": {
+    "avg_days": <number or null>,
+    "note": "<plain-language observation about reporting timeliness or null>"
+  },
+  "by_coverage_type": [
+    { "coverage_type": "<e.g. Collision, Property Damage, Bodily Injury, Comprehensive>", "claim_count": <number>, "total_incurred": <number> }
+  ],
   "loss_types": [
     { "loss_type": "<string>", "claim_count": <number>, "total_incurred": <number> }
+  ],
+  "by_location": [
+    { "location": "<string>", "claim_count": <number>, "total_incurred": <number> }
   ],
   "large_claims": [
     {
       "loss_date": "<string>",
       "description": "<string>",
       "claimant": "<string or null>",
-      "total_incurred": <number>
+      "coverage_type": "<string or null>",
+      "total_incurred": <number>,
+      "status": "<open|closed|unknown>"
     }
   ],
   "summary": "<2-3 sentence plain-language summary of auto/GL loss pattern>"

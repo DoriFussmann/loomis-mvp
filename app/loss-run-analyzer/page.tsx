@@ -478,20 +478,238 @@ function ReportView({ result }: { result: AnalysisResult }) {
       {/* WC detail */}
       {report.wc_detail && (
         <Section title="Workers Compensation Detail">
-          <p style={{ fontSize: '0.85rem', color: C.mutedFg, marginBottom: '1rem', lineHeight: 1.6 }}>
+          {/* Summary */}
+          <p style={{ fontSize: '0.85rem', color: C.mutedFg, marginBottom: '1.5rem', lineHeight: 1.6 }}>
             {report.wc_detail.summary}
           </p>
+
+          {/* Financials */}
+          {report.wc_detail.financials && (
+            <div style={{ marginBottom: '1.5rem' }}>
+              <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: C.mutedFg, marginBottom: '0.75rem' }}>Financials</p>
+              <Table
+                headers={['Type', 'Paid', 'Reserve', 'Total']}
+                rows={[
+                  ['Indemnity', fmt$(report.wc_detail.financials.indemnity?.paid), fmt$(report.wc_detail.financials.indemnity?.reserve), <span style={{ fontWeight: 700 }}>{fmt$(report.wc_detail.financials.indemnity?.total)}</span>],
+                  ['Medical', fmt$(report.wc_detail.financials.medical?.paid), fmt$(report.wc_detail.financials.medical?.reserve), <span style={{ fontWeight: 700 }}>{fmt$(report.wc_detail.financials.medical?.total)}</span>],
+                  ['Expense', fmt$(report.wc_detail.financials.expense?.paid), fmt$(report.wc_detail.financials.expense?.reserve), <span style={{ fontWeight: 700 }}>{fmt$(report.wc_detail.financials.expense?.total)}</span>],
+                ]}
+              />
+            </div>
+          )}
+
+          {/* Claim type split + Litigated */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1.5rem' }}>
+            {report.wc_detail.claim_type_split && (
+              <div style={{ border: `1px solid ${C.border}`, borderRadius: '0.5rem', padding: '1rem' }}>
+                <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: C.mutedFg, marginBottom: '0.5rem' }}>Claim Types</p>
+                {[
+                  ['Indemnity', report.wc_detail.claim_type_split.indemnity_count],
+                  ['Medical Only', report.wc_detail.claim_type_split.medical_only_count],
+                  ['Incident Only', report.wc_detail.claim_type_split.incident_only_count],
+                ].map(([label, val]) => (
+                  <div key={label as string} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', padding: '0.2rem 0', borderBottom: `1px solid ${C.border}` }}>
+                    <span style={{ color: C.mutedFg }}>{label}</span>
+                    <span style={{ fontWeight: 600, color: C.fg }}>{val ?? '—'}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {report.wc_detail.litigated_claims && (
+              <div style={{ border: `1px solid ${C.border}`, borderRadius: '0.5rem', padding: '1rem' }}>
+                <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: C.mutedFg, marginBottom: '0.5rem' }}>Litigated Claims</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', padding: '0.2rem 0', borderBottom: `1px solid ${C.border}` }}>
+                  <span style={{ color: C.mutedFg }}>Count</span>
+                  <span style={{ fontWeight: 600, color: C.fg }}>{report.wc_detail.litigated_claims.count ?? '—'}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', padding: '0.2rem 0' }}>
+                  <span style={{ color: C.mutedFg }}>Total Incurred</span>
+                  <span style={{ fontWeight: 600, color: C.fg }}>{fmt$(report.wc_detail.litigated_claims.total_incurred)}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Reporting lag */}
+          {report.wc_detail.reporting_lag && (
+            <div style={{ marginBottom: '1.5rem' }}>
+              <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: C.mutedFg, marginBottom: '0.75rem' }}>Reporting Lag</p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                {[
+                  ['0–3 Days', report.wc_detail.reporting_lag.within_3_days],
+                  ['4–10 Days', report.wc_detail.reporting_lag.days_4_to_10],
+                  ['11+ Days', report.wc_detail.reporting_lag.days_11_plus],
+                ].map(([label, val]) => (
+                  <div key={label as string} style={{ background: C.muted, border: `1px solid ${C.border}`, borderRadius: '0.375rem', padding: '0.6rem 0.75rem', textAlign: 'center' }}>
+                    <p style={{ fontSize: '1.2rem', fontWeight: 700, color: C.fg }}>{val ?? '—'}</p>
+                    <p style={{ fontSize: '0.7rem', color: C.mutedFg }}>{label}</p>
+                  </div>
+                ))}
+              </div>
+              {report.wc_detail.reporting_lag.avg_days != null && (
+                <p style={{ fontSize: '0.8rem', color: C.mutedFg }}>
+                  Avg days to report: <span style={{ fontWeight: 600, color: C.fg }}>{report.wc_detail.reporting_lag.avg_days}</span>
+                </p>
+              )}
+              {report.wc_detail.reporting_lag.note && (
+                <p style={{ fontSize: '0.8rem', color: C.mutedFg, marginTop: '0.25rem' }}>{report.wc_detail.reporting_lag.note}</p>
+              )}
+            </div>
+          )}
+
+          {/* Injury breakdown */}
           {report.wc_detail.injury_breakdown?.length > 0 && (
-            <Table
-              headers={['Cause of Injury', 'Body Parts', 'Claims', 'Total Incurred', 'Avg Cost']}
-              rows={report.wc_detail.injury_breakdown.map((row) => [
-                <span>{row.cause}</span>,
-                <span style={{ fontSize: '0.75rem', color: C.mutedFg }}>{row.body_parts.join(', ')}</span>,
-                row.claim_count,
-                fmt$(row.total_incurred),
-                fmt$(row.avg_cost),
-              ])}
-            />
+            <div style={{ marginBottom: '1.5rem' }}>
+              <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: C.mutedFg, marginBottom: '0.75rem' }}>Cause of Injury</p>
+              <Table
+                headers={['Cause', 'Body Parts', 'Claims', 'Total Incurred', 'Avg Cost']}
+                rows={report.wc_detail.injury_breakdown.map((row) => [
+                  <span style={{ fontWeight: 600 }}>{row.cause}</span>,
+                  <span style={{ fontSize: '0.75rem', color: C.mutedFg }}>{row.body_parts?.join(', ')}</span>,
+                  row.claim_count,
+                  fmt$(row.total_incurred),
+                  fmt$(row.avg_cost),
+                ])}
+              />
+            </div>
+          )}
+
+          {/* Top body parts */}
+          {report.wc_detail.top_body_parts?.length > 0 && (
+            <div style={{ marginBottom: '1.5rem' }}>
+              <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: C.mutedFg, marginBottom: '0.75rem' }}>Top Body Parts</p>
+              <Table
+                headers={['Body Part', 'Claims', 'Total Incurred']}
+                rows={report.wc_detail.top_body_parts.map((row) => [
+                  <span style={{ fontWeight: 600 }}>{row.body_part}</span>,
+                  row.claim_count,
+                  fmt$(row.total_incurred),
+                ])}
+              />
+            </div>
+          )}
+
+          {/* By age at injury */}
+          {report.wc_detail.by_age_at_injury?.length > 0 && (
+            <div style={{ marginBottom: '1.5rem' }}>
+              <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: C.mutedFg, marginBottom: '0.75rem' }}>By Age at Injury</p>
+              <Table
+                headers={['Age Bracket', 'Claims', 'Total Incurred']}
+                rows={report.wc_detail.by_age_at_injury.map((row) => [
+                  row.age_bracket,
+                  row.claim_count,
+                  fmt$(row.total_incurred),
+                ])}
+              />
+            </div>
+          )}
+
+          {/* By month */}
+          {report.wc_detail.by_month?.length > 0 && (
+            <div style={{ marginBottom: '1.5rem' }}>
+              <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: C.mutedFg, marginBottom: '0.75rem' }}>By Month</p>
+              <Table
+                headers={['Month', 'Claims', 'Total Incurred']}
+                rows={report.wc_detail.by_month.map((row) => [
+                  row.month,
+                  row.claim_count,
+                  fmt$(row.total_incurred),
+                ])}
+              />
+            </div>
+          )}
+
+          {/* By day of week */}
+          {report.wc_detail.by_day_of_week?.length > 0 && (
+            <div style={{ marginBottom: '1.5rem' }}>
+              <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: C.mutedFg, marginBottom: '0.75rem' }}>By Day of Week</p>
+              <Table
+                headers={['Day', 'Claims', 'Total Incurred']}
+                rows={report.wc_detail.by_day_of_week.map((row) => [
+                  row.day,
+                  row.claim_count,
+                  fmt$(row.total_incurred),
+                ])}
+              />
+            </div>
+          )}
+
+          {/* By department */}
+          {report.wc_detail.by_department?.length > 0 && (
+            <div style={{ marginBottom: '1.5rem' }}>
+              <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: C.mutedFg, marginBottom: '0.75rem' }}>By Department</p>
+              <Table
+                headers={['Department', 'Claims', 'Total Incurred']}
+                rows={report.wc_detail.by_department.map((row) => [
+                  row.department,
+                  row.claim_count,
+                  fmt$(row.total_incurred),
+                ])}
+              />
+            </div>
+          )}
+
+          {/* By state */}
+          {report.wc_detail.by_state?.length > 0 && (
+            <div style={{ marginBottom: '1.5rem' }}>
+              <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: C.mutedFg, marginBottom: '0.75rem' }}>By State</p>
+              <Table
+                headers={['State', 'Claims', 'Total Incurred']}
+                rows={report.wc_detail.by_state.map((row) => [
+                  row.state,
+                  row.claim_count,
+                  fmt$(row.total_incurred),
+                ])}
+              />
+            </div>
+          )}
+
+          {/* Repeat claimants */}
+          {report.wc_detail.repeat_claimants?.length > 0 && (
+            <div style={{ marginBottom: '1.5rem' }}>
+              <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: C.mutedFg, marginBottom: '0.75rem' }}>Repeat Claimants</p>
+              <Table
+                headers={['Claimant', 'Claims', 'Total Incurred']}
+                rows={report.wc_detail.repeat_claimants.map((row) => [
+                  <span style={{ fontWeight: 600 }}>{row.claimant}</span>,
+                  row.claim_count,
+                  fmt$(row.total_incurred),
+                ])}
+              />
+            </div>
+          )}
+
+          {/* Open vs Closed */}
+          {report.wc_detail.open_vs_closed && (
+            <div style={{ marginBottom: '1.5rem' }}>
+              <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: C.mutedFg, marginBottom: '0.75rem' }}>Open vs Closed</p>
+              <Table
+                headers={['Status', 'Count', 'Total Incurred']}
+                rows={[
+                  ['Open', report.wc_detail.open_vs_closed.open_count ?? '—', fmt$(report.wc_detail.open_vs_closed.open_incurred)],
+                  ['Closed', report.wc_detail.open_vs_closed.closed_count ?? '—', fmt$(report.wc_detail.open_vs_closed.closed_incurred)],
+                ]}
+              />
+            </div>
+          )}
+
+          {/* Large claims */}
+          {report.wc_detail.large_claims?.length > 0 && (
+            <div style={{ marginBottom: '1.5rem' }}>
+              <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: C.mutedFg, marginBottom: '0.75rem' }}>Large Claims</p>
+              <Table
+                headers={['Claimant', 'Date', 'Cause', 'Body Part', 'Type', 'Total Incurred', 'Status']}
+                rows={report.wc_detail.large_claims.map((c) => [
+                  <span style={{ fontWeight: 600 }}>{c.claimant}</span>,
+                  <span style={{ fontSize: '0.75rem', color: C.mutedFg }}>{c.loss_date}</span>,
+                  <span style={{ fontSize: '0.75rem' }}>{c.cause}</span>,
+                  <span style={{ fontSize: '0.75rem', color: C.mutedFg }}>{c.body_part ?? '—'}</span>,
+                  <span style={{ fontSize: '0.75rem', color: C.mutedFg }}>{c.claim_type ?? '—'}</span>,
+                  <span style={{ fontWeight: 700 }}>{fmt$(c.total_incurred)}</span>,
+                  c.status ? <Badge text={c.status} variant={c.status as 'open' | 'closed'} /> : '—',
+                ])}
+              />
+            </div>
           )}
         </Section>
       )}
