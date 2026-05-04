@@ -49,6 +49,27 @@ interface LargeClaim {
 }
 
 interface WCDetail {
+  financials: {
+    indemnity: { paid: number | null; reserve: number | null; total: number | null }
+    medical: { paid: number | null; reserve: number | null; total: number | null }
+    expense: { paid: number | null; reserve: number | null; total: number | null }
+  } | null
+  claim_type_split: {
+    indemnity_count: number | null
+    medical_only_count: number | null
+    incident_only_count: number | null
+  } | null
+  litigated_claims: {
+    count: number | null
+    total_incurred: number | null
+  } | null
+  reporting_lag: {
+    avg_days: number | null
+    within_3_days: number | null
+    days_4_to_10: number | null
+    days_11_plus: number | null
+    note: string | null
+  } | null
   injury_breakdown: Array<{
     cause: string
     body_parts: string[]
@@ -57,19 +78,43 @@ interface WCDetail {
     avg_cost: number
   }>
   top_body_parts: Array<{ body_part: string; claim_count: number; total_incurred: number }>
+  by_age_at_injury: Array<{ age_bracket: string; claim_count: number; total_incurred: number }>
+  by_day_of_week: Array<{ day: string; claim_count: number; total_incurred: number }>
+  by_month: Array<{ month: string; claim_count: number; total_incurred: number }>
+  by_state: Array<{ state: string; claim_count: number; total_incurred: number }>
+  by_department: Array<{ department: string; claim_count: number; total_incurred: number }>
+  repeat_claimants: Array<{ claimant: string; claim_count: number; total_incurred: number }>
   open_vs_closed: {
     open_count: number | null
     closed_count: number | null
     open_incurred: number | null
     closed_incurred: number | null
-  }
-  large_claims: LargeClaim[]
+  } | null
+  large_claims: Array<{
+    claimant: string
+    loss_date: string
+    cause: string
+    body_part: string | null
+    total_incurred: number
+    status: string
+    claim_type: string | null
+  }>
   summary: string
 }
 
 interface AutoGLDetail {
+  reporting_lag: { avg_days: number | null; note: string | null } | null
+  by_coverage_type: Array<{ coverage_type: string; claim_count: number; total_incurred: number }>
   loss_types: Array<{ loss_type: string; claim_count: number; total_incurred: number }>
-  large_claims: LargeClaim[]
+  by_location: Array<{ location: string; claim_count: number; total_incurred: number }>
+  large_claims: Array<{
+    loss_date: string
+    description: string
+    claimant: string | null
+    coverage_type: string | null
+    total_incurred: number
+    status: string
+  }>
   summary: string
 }
 
