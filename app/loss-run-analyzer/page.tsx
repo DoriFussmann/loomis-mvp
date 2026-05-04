@@ -378,7 +378,7 @@ function ReportView({ result }: { result: AnalysisResult }) {
   const { report } = result
   const ls = report.loss_summary
 
-  const allLargeClaims: LargeClaim[] = [
+  const allLargeClaims = [
     ...(report.wc_detail?.large_claims ?? []),
     ...(report.auto_gl_detail?.large_claims ?? []),
   ].sort((a, b) => b.total_incurred - a.total_incurred)
