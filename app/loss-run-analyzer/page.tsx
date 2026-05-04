@@ -783,13 +783,16 @@ function ReportView({ result }: { result: AnalysisResult }) {
         <Section title="Large Claims">
           <Table
             headers={['Date', 'Claimant / Description', 'Cause', 'Total Incurred', 'Status']}
-            rows={allLargeClaims.map((c) => [
-              <span style={{ fontSize: '0.75rem', color: C.mutedFg, whiteSpace: 'nowrap' }}>{c.loss_date}</span>,
-              <span>{c.claimant ?? c.description ?? '—'}</span>,
-              <span style={{ fontSize: '0.75rem', color: C.mutedFg }}>{c.cause ?? c.description ?? '—'}</span>,
-              <span>{fmt$(c.total_incurred)}</span>,
-              c.status ? <Badge text={c.status} variant={c.status as 'open' | 'closed'} /> : '—',
-            ])}
+            rows={allLargeClaims.map((c) => {
+              const d = c as any
+              return [
+                <span style={{ fontSize: '0.75rem', color: C.mutedFg, whiteSpace: 'nowrap' }}>{d.loss_date}</span>,
+                <span>{d.claimant ?? d.description ?? '—'}</span>,
+                <span style={{ fontSize: '0.75rem', color: C.mutedFg }}>{d.cause ?? d.description ?? '—'}</span>,
+                <span>{fmt$(d.total_incurred)}</span>,
+                d.status ? <Badge text={d.status} variant={d.status as 'open' | 'closed'} /> : '—',
+              ]
+            })}
           />
         </Section>
       )}
