@@ -352,13 +352,13 @@ export async function extractEmployerApplication(fileBase64: string): Promise<Em
 
   if (formCoverage >= 0.35) {
     const checkboxResolved = await resolveCheckboxFieldsWithAnthropic(fileBase64);
-    const mergedFormFirst: Record<string, string> = { ...checkboxResolved, ...mappedFromForm };
+    const mergedFormFirst: Record<string, string> = { ...(checkboxResolved as Record<string, string>), ...mappedFromForm };
     return buildResult(applyCheckboxConsistency(mergedFormFirst), "form-fields");
   }
 
   const fallback = await fallbackWithAnthropic(fileBase64);
   const checkboxResolved = await resolveCheckboxFieldsWithAnthropic(fileBase64);
-  const merged: Record<string, string> = { ...fallback, ...checkboxResolved, ...mappedFromForm };
+  const merged: Record<string, string> = { ...fallback, ...(checkboxResolved as Record<string, string>), ...mappedFromForm };
 
   // Ensure unknown keys don't leak into output and missing are explicit.
   for (const section of EMPLOYER_APPLICATION_SCHEMA) {
