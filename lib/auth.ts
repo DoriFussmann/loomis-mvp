@@ -1,42 +1,27 @@
-import { SignJWT, jwtVerify } from "jose";
-import bcrypt from "bcryptjs";
-import { cookies } from "next/headers";
 import type { SessionPayload } from "./types";
+import { getUserByAuthId } from "./data";
+import { createServerSupabaseClient } from "./supabase/server";
 
-const SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET ?? "dev-secret-change-in-production-please"
-);
-const COOKIE_NAME = "session";
-
-export async function signToken(payload: SessionPayload): Promise<string> {
-  return new SignJWT({ ...payload })
-    .setProtectedHeader({ alg: "HS256" })
-    .setExpirationTime("7d")
-    .sign(SECRET);
-}
-
-export async function verifyToken(token: string): Promise<SessionPayload | null> {
-  try {
-    const { payload } = await jwtVerify(token, SECRET);
-    return payload as unknown as SessionPayload;
-  } catch {
-    return null;
-  }
-}
+const COOKIE_NAME = "sb-access-token";
 
 export async function getSession(): Promise<SessionPayload | null> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(COOKIE_NAME)?.value;
-  if (!token) return null;
-  return verifyToken(token);
-}
+  const supabase = await createServerSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-export function hashPassword(password: string): string {
-  return bcrypt.hashSync(password, 10);
-}
+  if (!user) return null;
+  const appUser = await getUserByAuthId(user.id);
+  if (!appUser) return null;
 
-export function verifyPassword(password: string, hash: string): boolean {
-  return bcrypt.compareSync(password, hash);
+  return {
+    id: appUser.id,
+    name: appUser.name,
+    email: appUser.email,
+    role: appUser.role,
+    allowedPages: appUser.allowedPages ?? [],
+    departments: appUser.departments ?? [],
+  };
 }
 
 export const COOKIE_NAME_EXPORT = COOKIE_NAME;

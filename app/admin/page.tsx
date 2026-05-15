@@ -3,10 +3,12 @@ import { getUsers, getPages, getPrompts } from "@/lib/data";
 import { Users, FileText, Zap } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-export default function AdminDashboard() {
-  const users = getUsers();
-  const pages = getPages();
-  const prompts = getPrompts();
+export const dynamic = "force-dynamic";
+
+export default async function AdminDashboard() {
+  const users = await getUsers();
+  const pages = await getPages();
+  const prompts = await getPrompts();
 
   const stats = [
     { label: "Users", value: users.length, href: "/admin/users", icon: Users },

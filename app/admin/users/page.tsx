@@ -8,12 +8,15 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
-interface User { id: string; name: string; email: string; role: string; allowedPages: string[]; }
+type Department = "P&C" | "Benefits";
+const DEPARTMENTS: Department[] = ["P&C", "Benefits"];
+
+interface User { id: string; name: string; email: string; role: string; allowedPages: string[]; departments: Department[]; }
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", password: "", role: "user" });
+  const [form, setForm] = useState({ name: "", email: "", password: "", role: "user", departments: [] as Department[] });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -32,7 +35,16 @@ export default function UsersPage() {
     const data = await res.json();
     setSaving(false);
     if (!data.success) { setError(data.error); return; }
-    setShowAdd(false); setForm({ name: "", email: "", password: "", role: "user" }); load();
+    setShowAdd(false); setForm({ name: "", email: "", password: "", role: "user", departments: [] }); load();
+  }
+
+  function toggleDepartment(department: Department) {
+    setForm((prev) => ({
+      ...prev,
+      departments: prev.departments.includes(department)
+        ? prev.departments.filter((dept) => dept !== department)
+        : [...prev.departments, department],
+    }));
   }
 
   return (
@@ -71,6 +83,28 @@ export default function UsersPage() {
                   <option value="admin">Admin</option>
                 </select>
               </div>
+              <div className="flex flex-col gap-1.5 sm:col-span-2">
+                <Label>Departments</Label>
+                <div className="flex flex-wrap gap-2">
+                  {DEPARTMENTS.map((department) => {
+                    const selected = form.departments.includes(department);
+                    return (
+                      <button
+                        key={department}
+                        type="button"
+                        onClick={() => toggleDepartment(department)}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-light border transition-colors duration-200 ${
+                          selected
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "border-border text-muted-foreground hover:border-primary/50"
+                        }`}
+                      >
+                        {department}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
               {error && <p className="text-sm text-destructive col-span-2">{error}</p>}
               <div className="flex gap-2 col-span-2">
                 <Button type="submit" size="sm" disabled={saving}>{saving ? "Saving..." : "Create user"}</Button>
@@ -91,6 +125,9 @@ export default function UsersPage() {
                 </div>
                 <p className="text-sm font-normal truncate mb-0.5">{user.name}</p>
                 <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {user.departments?.length ? user.departments.join(", ") : "No departments"}
+                </p>
                 {user.role === "user" && (
                   <p className="text-xs text-muted-foreground mt-2">
                     {user.allowedPages.length} page{user.allowedPages.length !== 1 ? "s" : ""} access

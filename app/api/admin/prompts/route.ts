@@ -3,7 +3,7 @@ import { getPrompts, savePrompts } from "@/lib/data";
 import { v4 as uuidv4 } from "uuid";
 
 export async function GET() {
-  return NextResponse.json({ success: true, data: getPrompts() });
+  return NextResponse.json({ success: true, data: await getPrompts() });
 }
 
 export async function POST(request: NextRequest) {
@@ -13,6 +13,7 @@ export async function POST(request: NextRequest) {
   }
   const now = new Date().toISOString();
   const prompt = { id: uuidv4(), name, pageSlug, template, createdAt: now, updatedAt: now };
-  savePrompts([...getPrompts(), prompt]);
+  const prompts = await getPrompts();
+  await savePrompts([...prompts, prompt]);
   return NextResponse.json({ success: true, data: prompt }, { status: 201 });
 }

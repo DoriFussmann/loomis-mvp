@@ -1,0 +1,9 @@
+﻿Add Employer Application and Client Validation tools
+
+- Employer Application: PDF/AI extraction of employer agreement forms with Excel export
+- Client Validation: UB-04 and CMS-1500 claim form identity verification against client DB
+  Two-step matching: Member ID + Last Name + DoB, fallback to Last Name + DoB
+  Supabase clients table with 50-record dummy dataset, Clients modal, Clear Session button
+- Department dashboard with Benefits/P&C routing
+- Supabase auth migration replacing JWT stack
+- Middleware updated for department-scoped access control

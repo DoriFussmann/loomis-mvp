@@ -9,7 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface Page { id: string; name: string; slug: string; }
-interface User { id: string; name: string; email: string; role: string; allowedPages: string[]; }
+type Department = "P&C" | "Benefits";
+const DEPARTMENTS: Department[] = ["P&C", "Benefits"];
+interface User { id: string; name: string; email: string; role: string; allowedPages: string[]; departments: Department[]; }
 
 export default function UserDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -17,6 +19,7 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
   const [pages, setPages] = useState<Page[]>([]);
   const [form, setForm] = useState({ name: "", email: "", role: "user" });
   const [allowedPages, setAllowedPages] = useState<string[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [newPassword, setNewPassword] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -32,6 +35,7 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
       setUser(u.data);
       setForm({ name: u.data.name, email: u.data.email, role: u.data.role });
       setAllowedPages(u.data.allowedPages ?? []);
+      setDepartments(u.data.departments ?? []);
     }
     if (p.success) setPages(p.data);
   }, [params.id]);
@@ -41,7 +45,7 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true); setError("");
-    const body: Record<string, unknown> = { ...form, allowedPages };
+    const body: Record<string, unknown> = { ...form, allowedPages, departments };
     if (newPassword.trim()) body.password = newPassword;
     const res = await fetch(`/api/admin/users/${params.id}`, {
       method: "PUT",
@@ -65,6 +69,12 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
   function togglePage(slug: string) {
     setAllowedPages((prev) =>
       prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug]
+    );
+  }
+
+  function toggleDepartment(department: Department) {
+    setDepartments((prev) =>
+      prev.includes(department) ? prev.filter((d) => d !== department) : [...prev, department]
     );
   }
 
@@ -102,6 +112,28 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
             <div className="flex flex-col gap-1.5">
               <Label>New password <span className="text-muted-foreground font-light">(leave blank to keep current)</span></Label>
               <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="••••••••" />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label>Departments</Label>
+              <div className="flex flex-wrap gap-2">
+                {DEPARTMENTS.map((department) => {
+                  const selected = departments.includes(department);
+                  return (
+                    <button
+                      key={department}
+                      type="button"
+                      onClick={() => toggleDepartment(department)}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-light border transition-colors duration-200 ${
+                        selected
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "border-border text-muted-foreground hover:border-primary/50"
+                      }`}
+                    >
+                      {department}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </CardContent>
         </Card>

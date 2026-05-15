@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: "promptId and variables required" }, { status: 400 });
   }
 
-  const prompt = getPromptById(promptId);
+  const prompt = await getPromptById(promptId);
   if (!prompt) {
     return NextResponse.json({ success: false, error: "Prompt not found" }, { status: 404 });
   }
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Validate all required variables are provided
-  const page = getPageBySlug(prompt.pageSlug);
+  const page = await getPageBySlug(prompt.pageSlug);
   if (page) {
     const missingVars = page.variables
       .map((v) => v.name)

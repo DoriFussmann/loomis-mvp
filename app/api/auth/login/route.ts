@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getUserByEmail } from "@/lib/data";
-import { signToken, verifyPassword } from "@/lib/auth";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getUserByAuthId } from "@/lib/data";
+import { getDefaultRouteForDepartments } from "@/lib/department-routing";
 
 export async function POST(request: NextRequest) {
   const { email, password } = await request.json();
@@ -9,25 +10,24 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: "Email and password required" }, { status: 400 });
   }
 
-  const user = getUserByEmail(email);
-  if (!user || !verifyPassword(password, user.passwordHash)) {
+  const supabase = await createServerSupabaseClient();
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error || !data.user) {
     return NextResponse.json({ success: false, error: "Invalid credentials" }, { status: 401 });
   }
 
-  const token = await signToken({ id: user.id, name: user.name, email: user.email, role: user.role, allowedPages: user.allowedPages ?? [] });
+  const user = await getUserByAuthId(data.user.id);
+  if (!user) {
+    await supabase.auth.signOut();
+    return NextResponse.json({ success: false, error: "No app profile found for this user" }, { status: 403 });
+  }
 
-  const response = NextResponse.json({
+  return NextResponse.json({
     success: true,
-    data: { role: user.role, name: user.name },
+    data: {
+      role: user.role,
+      name: user.name,
+      destination: getDefaultRouteForDepartments(user.departments ?? []),
+    },
   });
-
-  response.cookies.set("session", token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 7,
-    path: "/",
-  });
-
-  return response;
 }

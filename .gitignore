@@ -5,6 +5,8 @@ node_modules/
 
 # Next.js
 .next/
+.next-dev/
+.next-prod/
 out/
 
 # Env — NEVER commit

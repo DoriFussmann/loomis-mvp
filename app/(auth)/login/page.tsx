@@ -28,7 +28,7 @@ export default function LoginPage() {
       setError(data.error ?? "Login failed");
       return;
     }
-    router.push(data.data.role === "admin" ? "/admin" : "/");
+    router.push(data.data.destination ?? "/");
     router.refresh();
   }
 
@@ -81,6 +81,15 @@ export default function LoginPage() {
           >
             <span className="font-medium">User</span>
             <span className="font-mono text-xs text-muted-foreground/70">user@example.com</span>
+            <span className="font-mono text-xs text-muted-foreground/70">password</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => fillCredentials("benefits@example.com", "password")}
+            className="flex flex-col rounded px-2 py-1.5 hover:bg-muted transition-colors text-left"
+          >
+            <span className="font-medium">Benefits User</span>
+            <span className="font-mono text-xs text-muted-foreground/70">benefits@example.com</span>
             <span className="font-mono text-xs text-muted-foreground/70">password</span>
           </button>
         </div>

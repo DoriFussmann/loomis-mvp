@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { exportToExcel } from '@/lib/exportToExcel'
+import { Button } from '@/components/ui/button'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -1208,9 +1209,9 @@ export default function LossRunAnalyzerPage() {
               marginBottom: '1.5rem',
             }}
           >
-            <button onClick={() => setShowReport(false)} style={btnGhost}>
-              ← Back to Analysis
-            </button>
+            <Button variant="outline" size="sm" onClick={() => setShowReport(false)}>
+              Back to Analysis
+            </Button>
             <div style={{ display: 'flex', gap: '1rem' }}>
               <button onClick={handleCopy} style={btnGhost}>
                 {copied ? '✓ Copied' : 'Copy JSON'}

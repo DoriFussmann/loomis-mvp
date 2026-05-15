@@ -1,10 +1,13 @@
+export type Department = "P&C" | "Benefits";
+
 export interface User {
   id: string;
+  authUserId?: string;
   name: string;
   email: string;
-  passwordHash: string;
   role: "admin" | "user";
   allowedPages: string[];
+  departments: Department[];
 }
 
 export interface PageVariable {
@@ -35,4 +38,5 @@ export interface SessionPayload {
   email: string;
   role: "admin" | "user";
   allowedPages: string[];
+  departments: Department[];
 }

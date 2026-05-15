@@ -22,8 +22,8 @@ A lightweight multi-user web application built for **Loomis Insurance** with:
 | Framework | Next.js 14 (App Router) | Vercel-native, unified frontend + API |
 | Language | TypeScript (strict) | Type safety, maintainability |
 | Styling | Tailwind CSS + inline styles | Matches design system spec; inline styles used where CSS variables require `hsl()` wrapping |
-| Auth | JWT in httpOnly cookies | Simple, self-contained, no DB |
-| Persistence | Flat JSON files in `/data/` | No DB setup, committed to repo |
+| Auth | Supabase Auth (email/password) | Managed auth, secure session cookies |
+| Persistence | Supabase Postgres (`users`, `pages`, `prompts`) | Durable production data on Vercel |
 | AI | Anthropic SDK (`claude-sonnet-4-20250514`) | Two-stage PDF extraction |
 | Excel Export | `xlsx` npm package | Client-side Excel generation |
 | Deployment | Vercel (GitHub integration) | Zero-config, works with App Router |
@@ -36,9 +36,16 @@ A lightweight multi-user web application built for **Loomis Insurance** with:
 /
 ├── app/
 │   ├── layout.tsx
-│   ├── page.tsx                          # Home — lists pages the logged-in user can access
+│   ├── page.tsx                          # Root router — sends user to /pnc, /benefits, /admin, or /login
 │   ├── (auth)/
 │   │   └── login/page.tsx
+│   ├── pnc/
+│   │   └── page.tsx                      # Property & Casualty dashboard (current primary user dashboard)
+│   ├── benefits/
+│   │   └── page.tsx                      # Benefits dashboard shell (layout-only for now)
+│   ├── employer-application/
+│   │   ├── page.tsx                      # Benefits flow for Employer Agreement extraction
+│   │   └── ui-client.tsx                 # Upload, scan, animated section results, summary, excel export
 │   ├── admin/
 │   │   ├── layout.tsx
 │   │   ├── page.tsx
@@ -60,10 +67,27 @@ A lightweight multi-user web application built for **Loomis Insurance** with:
 │   ├── pages.json
 │   └── prompts.json
 ├── lib/
-│   ├── auth.ts                           # JWT sign/verify, session read, password hash
-│   ├── data.ts                           # Type-safe read/write helpers for JSON files
+│   ├── auth.ts                           # Session payload from Supabase auth + profile row
+│   ├── data.ts                           # Type-safe Supabase read/write helpers
+│   ├── supabase/
+│   │   ├── env.ts                        # Required env accessors
+│   │   ├── admin.ts                      # Service-role Supabase client
+│   │   ├── server.ts                     # Server/route Supabase client with cookie bridge
+│   │   └── middleware.ts                 # Middleware Supabase client wrapper
 │   ├── prompts.ts                        # Prompt lookup, {{variable}} interpolation
+│   ├── employerApplication/
+│   │   ├── schema.ts                     # Canonical section/field map for Employer Agreement
+│   │   └── extract.ts                    # Hybrid extraction (form fields + AI fallback)
 │   └── exportToExcel.ts                  # Client-side Excel export for loss run reports
+├── app/api/employer-application/
+│   └── extract/route.ts                  # POST — Employer Agreement field extraction
+├── lib/exportEmployerApplicationToExcel.ts # Client-side Field/Value export for Employer Application
+├── scripts/
+│   ├── import-json-to-supabase.mjs       # One-time JSON -> Supabase import
+│   └── verify-supabase-parity.mjs        # JSON vs Supabase parity check
+├── supabase/
+│   └── migrations/
+│       └── 20260515_initial_schema.sql   # Tables + RLS policies + helper functions
 ├── app/api/
 │   ├── auth/
 │   │   ├── login/route.ts
@@ -178,40 +202,20 @@ This is because the design system uses raw HSL values without the wrapper (e.g.,
 
 ## Data Schemas
 
-### `/data/users.json`
-```json
-[
-  {
-    "id": "uuid-v4",
-    "name": "Jane Admin",
-    "email": "jane@example.com",
-    "passwordHash": "bcrypt-hash",
-    "role": "admin",
-    "allowedPages": []
-  },
-  {
-    "id": "uuid-v4",
-    "name": "John User",
-    "email": "john@example.com",
-    "passwordHash": "bcrypt-hash",
-    "role": "user",
-    "allowedPages": ["loss-run-analyzer", "test"]
-  }
-]
-```
+Primary persistence now lives in Supabase Postgres:
+- `public.users` (`id`, `auth_user_id`, `name`, `email`, `role`, `allowed_pages`, `departments`)
+- `public.pages` (`id`, `name`, `slug`, `description`, `variables`)
+- `public.prompts` (`id`, `name`, `page_slug`, `template`, `created_at`, `updated_at`)
 
-### `/data/pages.json`
-```json
-[
-  {
-    "id": "uuid-v4",
-    "name": "Loss Run Analyzer",
-    "slug": "loss-run-analyzer",
-    "description": "Upload a loss run PDF to extract structured claims data and generate a client-ready report.",
-    "variables": []
-  }
-]
-```
+RLS is enabled on all three tables. Policy intent:
+- Admin users can read/write all rows.
+- Non-admin users can read only rows tied to their allowed page slugs.
+- User profile reads are scoped to self unless admin.
+
+Migration SQL source of truth:
+- `supabase/migrations/20260515_initial_schema.sql`
+
+Legacy `data/*.json` files are treated as migration seed/backup inputs (not runtime source of truth).
 
 ---
 
@@ -220,18 +224,20 @@ This is because the design system uses raw HSL values without the wrapper (e.g.,
 ### Required in `.env` (never commit)
 ```
 ANTHROPIC_API_KEY=sk-ant-...
-JWT_SECRET=a-long-random-string-minimum-32-chars
+NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
+SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
+IMPORT_USER_PASSWORD=<optional migration password default>
 ```
 
 ### `.env.example` (committed — template only)
 ```
 ANTHROPIC_API_KEY=
-JWT_SECRET=
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+IMPORT_USER_PASSWORD=
 ```
-
-**Generate JWT_SECRET:** `openssl rand -base64 32`
-
-**Important:** If JWT_SECRET changes, all existing sessions are invalidated. Users must log out and log back in.
 
 ---
 
@@ -239,28 +245,36 @@ JWT_SECRET=
 
 ### How it works
 1. User POSTs to `/api/auth/login` with email + password
-2. Server checks `users.json`, verifies bcrypt hash
-3. On success: signs JWT `{ id, email, role, allowedPages }` with `JWT_SECRET`, sets as httpOnly cookie `session` (7-day expiry)
-4. `middleware.ts` runs on every request:
+2. Server uses `supabase.auth.signInWithPassword(...)` to authenticate
+3. App resolves authorization context from `public.users` row via `auth_user_id`
+4. Supabase manages session cookies; app reads session via `lib/supabase/server.ts`
+5. Login response includes a department-based destination:
+   - P&C only → `/pnc`
+   - Benefits only → `/benefits`
+   - Both departments → `/admin`
+6. `middleware.ts` runs on protected paths:
    - `/admin/*` → requires `role === "admin"`, redirects to `/login` otherwise
    - `/api/admin/*` → same admin check, returns 401 JSON
+   - `/pnc` → requires `departments` contains `P&C` (or admin role)
+   - `/benefits` → requires `departments` contains `Benefits` (or admin role)
+   - `/employer-application` and `/api/employer-application/*` → requires `Benefits` department (or admin role)
    - `/api/analyze-loss-run` → requires valid session (any role)
    - `/loss-run-analyzer`, `/test` → requires valid session + slug in `allowedPages[]`
-5. Logout clears cookie, redirects to `/login`
+7. Logout calls `supabase.auth.signOut()` then redirects to `/login`
 
 ### middleware.ts matcher
 ```typescript
 export const config = {
-  matcher: ["/admin/:path*", "/api/admin/:path*", "/api/analyze-loss-run", "/test", "/loss-run-analyzer"],
+  matcher: ["/admin/:path*", "/api/admin/:path*", "/api/analyze-loss-run", "/test", "/loss-run-analyzer", "/pnc", "/benefits", "/employer-application", "/api/employer-application/:path*"],
 }
 ```
 
 ### Password Reset
-Admin sets new password via Admin UI → PUT `/api/admin/users/[id]` with `{ password }` → bcrypt hashed, stored in `users.json`.
+Admin can set a new password via Admin UI. Backend calls `supabase.auth.admin.updateUserById(...)`.
 
 ### Default Admin Account
-- Email: `admin@admin.com`
-- Password: `changeme` — **change immediately on first deploy**
+No hardcoded default admin is created in source code.
+Create the first admin account in Supabase/Auth import flow before launch.
 
 ---
 
@@ -270,7 +284,7 @@ All responses: `{ success: boolean, data?: any, error?: string }`
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| POST | `/api/auth/login` | None | Login, sets session cookie |
+| POST | `/api/auth/login` | None | Login, sets session cookie and returns destination route |
 | POST | `/api/auth/logout` | Any | Clears session cookie |
 | GET | `/api/admin/users` | Admin | List all users |
 | POST | `/api/admin/users` | Admin | Create user |
@@ -286,6 +300,7 @@ All responses: `{ success: boolean, data?: any, error?: string }`
 | DELETE | `/api/admin/prompts/[id]` | Admin | Delete prompt |
 | POST | `/api/run-prompt` | User (page access) | Run a prompt with variable inputs |
 | POST | `/api/analyze-loss-run` | User (session) | Two-stage loss run PDF extraction |
+| POST | `/api/employer-application/extract` | Benefits/Admin | Extract employer agreement sections/fields, missing flags, and completion metrics |
 
 ---
 
@@ -305,10 +320,21 @@ All responses: `{ success: boolean, data?: any, error?: string }`
 
 ```bash
 npm install
-# ensure .env has ANTHROPIC_API_KEY and JWT_SECRET
+# ensure .env has ANTHROPIC_API_KEY + Supabase env vars
 npm run dev
 # → http://localhost:3000
-# Login: admin@admin.com / changeme
+```
+
+### One-time migration commands
+```bash
+# 1) Apply SQL in Supabase SQL editor:
+#    supabase/migrations/20260515_initial_schema.sql
+
+# 2) Import legacy JSON data into Supabase:
+npm run import:supabase
+
+# 3) Verify parity (IDs/counts) between data/*.json and Supabase:
+npm run verify:supabase
 ```
 
 ---
@@ -319,10 +345,10 @@ npm run dev
 2. Import repo in Vercel dashboard
 3. Add env vars in Vercel project settings:
    - `ANTHROPIC_API_KEY`
-   - `JWT_SECRET`
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
 4. Deploy — zero config, Next.js auto-detected
-
-**Note on flat files:** `/data/*.json` are committed and deployed with the build. Admin UI writes mutate the server filesystem. On Vercel serverless this works for low-traffic use but resets on redeploy. For production persistence, migrate to Postgres or Supabase.
 
 ---
 
@@ -331,7 +357,7 @@ npm run dev
 | Item | Current State | Suggested Fix |
 |---|---|---|
 | Rate limits | 30K tokens/min hits on 32+ page PDFs | Upgrade Anthropic tier or add delay between classifier/extractor |
-| Persistence | Flat JSON resets on redeploy | Add Postgres/Supabase |
+| Persistence | Supabase-backed, durable | Add backups and point-in-time restore policy |
 | Password reset | Admin manual only | Add email flow (Resend/SendGrid) |
 | Multi-file upload | Single PDF only | Combine classifier outputs, send all PDFs to one extractor call |
 | Excel styling | Basic — no charts | Add chart sheets using xlsx chart API |

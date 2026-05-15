@@ -43,8 +43,8 @@ Key tokens: --background, --foreground, --card, --primary, --secondary,
 --muted, --accent, --destructive, --border, --input, --ring, --sidebar-*
 
 ### Border Radius
-- --radius: 0.5rem
-- lg: var(--radius), md: calc(var(--radius) - 2px), sm: calc(var(--radius) - 4px)
+- --radius: 0.625rem
+- lg: var(--radius), md: calc(var(--radius) - 3px), sm: calc(var(--radius) - 5px)
 
 ### Layout Rules
 - Max content width: 1080px (max-w-[1080px]) on ALL pages and layouts
@@ -53,7 +53,10 @@ Key tokens: --background, --foreground, --card, --primary, --secondary,
 - Full-bleed backgrounds are fine; only the inner content wrapper is capped
 
 ### Aesthetic Rules
-- Monochromatic soft grey palette, no strong accent colors
+- Warm, airy palette: near-white backgrounds, soft warm foreground (not near-black), delicate borders
+- Cards use pure white (#fff) for crisp contrast against the warm background
+- Primary color is warm stone (28 18% 30%), not near-black — buttons should feel light, not heavy
+- Foreground text at 22% lightness — readable but gentle, never coal-black
 - Subtle shadows only (shadow-sm), never deep/harsh
 - Thin borders using --border on all containers and inputs
 - Hover: subtle background shift
@@ -61,6 +64,7 @@ Key tokens: --background, --foreground, --card, --primary, --secondary,
 - Transitions: 0.2s ease-out on interactive elements
 - Icons: Lucide React, w-4 h-4 standard, w-3.5 h-3.5 compact
 - Spacing: px-4 py-2, gap-2 as base units
+- Never hardcode raw RGB/hex values; always use hsl(var(--token)) tokens
 
 ---
 

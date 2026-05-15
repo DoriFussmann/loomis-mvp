@@ -1,72 +1,113 @@
 import { NextRequest, NextResponse } from "next/server";
-import { jwtVerify } from "jose";
-
-const SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET ?? "dev-secret-change-in-production-please"
-);
+import { createMiddlewareSupabaseClient } from "@/lib/supabase/middleware";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  console.log("[middleware] cookies:", request.cookies.getAll());
-  const token = request.cookies.get("session")?.value;
+  const response = NextResponse.next({ request });
+  const supabase = createMiddlewareSupabaseClient(request, response);
 
-  // Verify token
-  let session = null;
-  if (token) {
-    try {
-      const { payload } = await jwtVerify(token, SECRET);
-      session = payload;
-    } catch (err) {
-      console.log("[middleware] jwtVerify error:", err);
-      session = null;
-    }
-  }
-
-  console.log("[middleware]", { pathname, session });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const session = user
+    ? await supabase
+        .from("users")
+        .select("role,allowed_pages,departments")
+        .eq("auth_user_id", user.id)
+        .maybeSingle()
+    : null;
+  const role = session?.data?.role ?? null;
+  const allowedPages = session?.data?.allowed_pages ?? [];
+  const departments = session?.data?.departments ?? [];
 
   // Admin routes — require admin role
   if (pathname.startsWith("/admin")) {
-    if (!session || session.role !== "admin") {
+    if (!user || role !== "admin") {
       return NextResponse.redirect(new URL("/login", request.url));
     }
-    return NextResponse.next();
+    return response;
   }
 
   // Admin API routes
   if (pathname.startsWith("/api/admin")) {
-    if (!session || session.role !== "admin") {
+    if (!user || role !== "admin") {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
-    return NextResponse.next();
+    return response;
   }
 
   // Protected API routes — require any valid session
   if (pathname.startsWith("/api/analyze-loss-run")) {
-    if (!session) {
+    if (!user) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
-    return NextResponse.next();
+    return response;
+  }
+
+  if (pathname.startsWith("/api/employer-application") || pathname.startsWith("/api/claims-validation")) {
+    if (!user) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
+    if (role !== "admin" && !departments.includes("Benefits")) {
+      return NextResponse.json({ success: false, error: "Access denied" }, { status: 403 });
+    }
+    return response;
+  }
+
+  if (
+    pathname === "/pnc" ||
+    pathname === "/benefits" ||
+    pathname === "/employer-application" ||
+    pathname === "/claims-validation"
+  ) {
+    if (!user) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+    if (role === "admin") return response;
+    if (pathname === "/pnc" && !departments.includes("P&C")) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+    if (
+      (pathname === "/benefits" ||
+        pathname === "/employer-application" ||
+        pathname === "/claims-validation") &&
+      !departments.includes("Benefits")
+    ) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+    return response;
   }
 
   // Protected user pages (add slugs here as you add pages)
   const protectedPages = ["/test", "/loss-run-analyzer"];
   if (protectedPages.includes(pathname)) {
-    if (!session) {
+    if (!user) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
     // Admin can access everything
-    if (session.role === "admin") return NextResponse.next();
+    if (role === "admin") return response;
     // Users need page in their allowedPages
-    const allowedPages = (session.allowedPages as string[]) ?? [];
     const slug = pathname.replace("/", "");
     if (!allowedPages.includes(slug)) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
   }
 
-  return NextResponse.next();
+  return response;
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/api/admin/:path*", "/api/analyze-loss-run", "/test"],
+  matcher: [
+    "/admin/:path*",
+    "/api/admin/:path*",
+    "/api/analyze-loss-run",
+    "/test",
+    "/loss-run-analyzer",
+    "/pnc",
+    "/benefits",
+    "/employer-application",
+    "/claims-validation",
+    "/api/employer-application/:path*",
+    "/api/claims-validation/:path*",
+  ],
 };
