@@ -11,13 +11,13 @@ export default async function ClaimsValidationPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-[1080px] mx-auto px-6 py-10">
+    <div>
+      <div className="mb-6">
         <Link href="/benefits">
           <Button variant="outline" size="sm">Back to Benefits</Button>
         </Link>
-        <ClaimsValidationClient />
       </div>
+      <ClaimsValidationClient />
     </div>
   );
 }

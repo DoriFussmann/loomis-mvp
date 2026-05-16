@@ -47,10 +47,14 @@ Key tokens: --background, --foreground, --card, --primary, --secondary,
 - lg: var(--radius), md: calc(var(--radius) - 3px), sm: calc(var(--radius) - 5px)
 
 ### Layout Rules
-- Max content width: 1080px (max-w-[1080px]) on ALL pages and layouts
+- Max content width: 1280px (max-w-[1280px]) on ALL pages and layouts
 - This applies to page content AND navigation/header elements
 - Always center constrained content with mx-auto
 - Full-bleed backgrounds are fine; only the inner content wrapper is capped
+- Global navigation header is provided by `components/site-header.tsx` (user pages) and `app/admin/layout.tsx` (admin pages)
+- User-facing pages live in `app/(app)/` route group — they inherit `SiteHeader` + `max-w-[1280px] mx-auto px-6 py-8` automatically
+- Never add per-page outer wrappers or padding when inside the `(app)/` route group
+- Consistent spacing: `py-8` page top/bottom, `px-6` horizontal, `gap-6` between cards, `mb-6` below headings
 
 ### Aesthetic Rules
 - Warm, airy palette: near-white backgrounds, soft warm foreground (not near-black), delicate borders

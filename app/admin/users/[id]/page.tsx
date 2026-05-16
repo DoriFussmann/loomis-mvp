@@ -78,10 +78,10 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
     );
   }
 
-  if (!user) return <div className="p-8 text-sm text-muted-foreground">Loading...</div>;
+  if (!user) return <div className="text-sm text-muted-foreground">Loading...</div>;
 
   return (
-    <div className="p-8 max-w-xl">
+    <div className="max-w-xl">
       <Link href="/admin/users" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6">
         <ArrowLeft className="w-4 h-4" /> Users
       </Link>

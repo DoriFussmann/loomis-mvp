@@ -5,7 +5,6 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { AppPage, SessionPayload } from "@/lib/types";
 
-// Nav items for the left sidebar (decorative except live items when interactive)
 const NAV_ITEMS = [
   { label: "Dashboard", icon: "⊞", active: true },
   { label: "Loss Run Analyzer", icon: "⬡", slug: "loss-run-analyzer" },
@@ -79,350 +78,219 @@ export function DepartmentDashboard({
   const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <div style={{ minHeight: "100vh", background: "hsl(var(--background))", fontFamily: "inherit" }}>
-      <div
-        style={{
-          maxWidth: "1280px",
-          margin: "0 auto",
-          minHeight: "100vh",
-          display: "flex",
-        }}
+    <div className="flex -mx-6 -mt-8">
+      {/* Left sidebar */}
+      <aside
+        className="flex-shrink-0 border-r border-border flex flex-col py-6 bg-background transition-[width] duration-200"
+        style={{ width: collapsed ? "52px" : "18%" }}
       >
-        <aside
-          style={{
-            width: collapsed ? "52px" : "18%",
-            flexShrink: 0,
-            borderRight: "1px solid hsl(var(--border))",
-            display: "flex",
-            flexDirection: "column",
-            padding: "1.5rem 0",
-            background: "hsl(var(--background))",
-            transition: "width 0.2s ease",
-            overflow: "hidden",
-            position: "relative",
-          }}
+        {/* Logo mark */}
+        <div
+          className="border-b border-border pb-6"
+          style={{ padding: collapsed ? "0 0 1.5rem" : "0 1.25rem 1.5rem" }}
         >
-          {/* Toggle chevron */}
-
-          <div style={{ padding: collapsed ? "0 0 1.5rem" : "0 1.25rem 1.5rem", borderBottom: "1px solid hsl(var(--border))" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", justifyContent: collapsed ? "center" : "flex-start" }}>
-              <div
-                style={{
-                  width: "28px",
-                  height: "28px",
-                  borderRadius: "6px",
-                  background: "hsl(var(--primary))",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
-              >
-                <span style={{ color: "hsl(var(--primary-foreground))", fontSize: "0.75rem", fontWeight: 700 }}>L</span>
-              </div>
-              {!collapsed && (
-                <span style={{ fontSize: "0.9rem", fontWeight: 600, color: "hsl(var(--foreground))", whiteSpace: "nowrap" }}>Loomis AI</span>
-              )}
-            </div>
-          </div>
-
-          <nav style={{ flex: 1, padding: "1rem 0.5rem", display: "flex", flexDirection: "column", gap: "0.15rem" }}>
-            {navItems.filter((item) => (showNavTools ? true : item.active)).map((item) => {
-              const isLive =
-                interactive && ((!!item.slug && accessiblePages.some((p) => p.slug === item.slug)) || item.forceLive === true);
-              const isActive = item.active;
-
-              const inner = (
-                <div
-                  title={collapsed ? item.label : undefined}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: collapsed ? "center" : "flex-start",
-                    gap: "0.6rem",
-                    padding: collapsed ? "0.45rem" : "0.45rem 0.75rem",
-                    borderRadius: "0.375rem",
-                    background: isActive ? "hsl(var(--primary))" : "transparent",
-                    cursor: isLive ? "pointer" : "default",
-                    opacity: !isActive && !isLive ? 0.45 : 1,
-                    transition: "background 0.15s",
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: "0.75rem",
-                      color: isActive ? "hsl(var(--primary-foreground))" : "hsl(var(--muted-foreground))",
-                      flexShrink: 0,
-                    }}
-                  >
-                    {item.icon}
-                  </span>
-                  {!collapsed && (
-                    <span
-                      style={{
-                        fontSize: "0.8rem",
-                        fontWeight: isActive ? 600 : 400,
-                        color: isActive ? "hsl(var(--primary-foreground))" : "hsl(var(--foreground))",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {item.label}
-                    </span>
-                  )}
-                </div>
-              );
-
-              return isLive ? (
-                <Link key={item.label} href={`/${item.slug}`} style={{ textDecoration: "none" }}>
-                  {inner}
-                </Link>
-              ) : (
-                <div key={item.label}>{inner}</div>
-              );
-            })}
-          </nav>
-
-          <div style={{ padding: "0.5rem 0.5rem 0.5rem", display: "flex", justifyContent: collapsed ? "center" : "flex-start" }}>
-            <button
-              onClick={() => setCollapsed((c) => !c)}
-              style={{
-                background: "hsl(var(--background))",
-                border: "1px solid hsl(var(--border))",
-                cursor: "pointer",
-                padding: "0.2rem",
-                color: "hsl(var(--muted-foreground))",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: "0.3rem",
-                width: "20px",
-                height: "20px",
-                boxShadow: "0 1px 3px hsl(var(--border))",
-              }}
-              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            >
-              {collapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
-            </button>
-          </div>
-
           <div
-            style={{
-              padding: collapsed ? "1rem 0 0" : "1rem 1.25rem 0",
-              borderTop: "1px solid hsl(var(--border))",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: collapsed ? "center" : "space-between",
-            }}
+            className="flex items-center gap-2"
+            style={{ justifyContent: collapsed ? "center" : "flex-start" }}
           >
+            <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center flex-shrink-0">
+              <span className="text-primary-foreground text-xs font-bold">L</span>
+            </div>
             {!collapsed && (
-              <div>
-                <p style={{ fontSize: "0.78rem", fontWeight: 500, color: "hsl(var(--foreground))", whiteSpace: "nowrap" }}>{session.name ?? session.email}</p>
-                <p style={{ fontSize: "0.7rem", color: "hsl(var(--muted-foreground))", whiteSpace: "nowrap" }}>{session.email}</p>
-              </div>
+              <span className="text-sm font-semibold text-foreground whitespace-nowrap">Loomis AI</span>
             )}
-            <form action="/api/auth/logout" method="POST">
-              <button
-                type="submit"
-                title="Sign out"
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  cursor: "pointer",
-                  fontSize: "0.75rem",
-                  color: "hsl(var(--muted-foreground))",
-                  padding: "0.25rem",
-                }}
-              >
-                →
-              </button>
-            </form>
-          </div>
-        </aside>
-
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-          <header
-            style={{
-              borderBottom: "1px solid hsl(var(--border))",
-              padding: "0.875rem 2rem",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              background: "hsl(var(--background))",
-            }}
-          >
-            <p style={{ fontSize: "0.82rem", color: "hsl(var(--muted-foreground))" }}>
-              Good morning, <span style={{ fontWeight: 600, color: "hsl(var(--foreground))" }}>{session.name ?? "Sarah"}</span>
-            </p>
-            <p style={{ fontSize: "0.75rem", color: "hsl(var(--muted-foreground))" }}>
-              {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
-            </p>
-          </header>
-
-          <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-            <main style={{ flex: 1, padding: "2rem", overflowY: "auto" }}>
-              <p
-                style={{
-                  fontSize: "0.75rem",
-                  color: "hsl(var(--muted-foreground))",
-                  marginBottom: "0.35rem",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.08em",
-                  fontWeight: 600,
-                }}
-              >
-                Platform
-              </p>
-              <h2 style={{ fontSize: "1.1rem", fontWeight: 600, color: "hsl(var(--foreground))", marginBottom: "1.5rem" }}>Explore the tools</h2>
-
-              {showTools && (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-                  {platformCards.map((card) => {
-                    const isLive =
-                      interactive &&
-                      ((card.live && !!card.slug && accessiblePages.some((p) => p.slug === card.slug)) || card.forceLive === true);
-                    const inner = (
-                      <div
-                        style={{
-                          border: "1px solid hsl(var(--border))",
-                          borderRadius: "0.5rem",
-                          padding: "1rem 1.25rem",
-                          background: "hsl(var(--background))",
-                          cursor: isLive ? "pointer" : "default",
-                          opacity: card.live && !isLive ? 0.5 : 1,
-                          transition: "border-color 0.15s",
-                          position: "relative",
-                        }}
-                      >
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.35rem" }}>
-                          <p style={{ fontSize: "0.875rem", fontWeight: 600, color: "hsl(var(--foreground))" }}>{card.label}</p>
-                          {!card.live && (
-                            <span
-                              style={{
-                                fontSize: "0.6rem",
-                                fontWeight: 700,
-                                padding: "0.1rem 0.4rem",
-                                borderRadius: "999px",
-                                background: "hsl(var(--muted))",
-                                color: "hsl(var(--muted-foreground))",
-                                letterSpacing: "0.05em",
-                              }}
-                            >
-                              COMING SOON
-                            </span>
-                          )}
-                          {isLive && (
-                            <span
-                              style={{
-                                fontSize: "0.6rem",
-                                fontWeight: 700,
-                                padding: "0.1rem 0.4rem",
-                                borderRadius: "999px",
-                                background: "hsl(var(--primary))",
-                                color: "hsl(var(--primary-foreground))",
-                                letterSpacing: "0.05em",
-                              }}
-                            >
-                              LIVE
-                            </span>
-                          )}
-                        </div>
-                        <p style={{ fontSize: "0.78rem", color: "hsl(var(--muted-foreground))", lineHeight: 1.5 }}>{card.description}</p>
-                      </div>
-                    );
-
-                    return isLive ? (
-                      <Link key={card.label} href={`/${card.slug}`} style={{ textDecoration: "none" }}>
-                        {inner}
-                      </Link>
-                    ) : (
-                      <div key={card.label}>{inner}</div>
-                    );
-                  })}
-                </div>
-              )}
-            </main>
-
-            <aside
-              style={{
-                width: "30%",
-                flexShrink: 0,
-                borderLeft: "1px solid hsl(var(--border))",
-                padding: "2rem 1.5rem",
-                overflowY: "auto",
-                background: "hsl(var(--background))",
-              }}
-            >
-              <p style={{ fontSize: "0.875rem", fontWeight: 700, color: "hsl(var(--foreground))", marginBottom: "1.25rem" }}>Needs Attention</p>
-              <p
-                style={{
-                  fontSize: "0.65rem",
-                  fontWeight: 700,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.1em",
-                  color: "hsl(var(--muted-foreground))",
-                  marginBottom: "0.75rem",
-                }}
-              >
-                Checklist
-              </p>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-                {ATTENTION_ITEMS.map((item, i) => {
-                  const dotColor = item.done
-                    ? "hsl(var(--muted-foreground))"
-                    : item.status === "alert"
-                      ? "rgb(220, 60, 40)"
-                      : item.status === "warning"
-                        ? "rgb(200, 130, 20)"
-                        : "hsl(var(--primary))";
-
-                  return (
-                    <div
-                      key={i}
-                      style={{
-                        display: "flex",
-                        alignItems: "flex-start",
-                        gap: "0.6rem",
-                        padding: "0.5rem 0.6rem",
-                        borderRadius: "0.375rem",
-                        background: "transparent",
-                        border: `1px solid ${item.done ? "transparent" : "hsl(var(--border))"}`,
-                        opacity: item.done ? 0.45 : 1,
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: "14px",
-                          height: "14px",
-                          borderRadius: "50%",
-                          border: `2px solid ${dotColor}`,
-                          flexShrink: 0,
-                          marginTop: "1px",
-                          background: item.done ? dotColor : "transparent",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        {item.done && <span style={{ color: "hsl(var(--background))", fontSize: "0.5rem" }}>✓</span>}
-                      </div>
-                      <p
-                        style={{
-                          fontSize: "0.78rem",
-                          color: "hsl(var(--foreground))",
-                          lineHeight: 1.4,
-                          textDecoration: item.done ? "line-through" : "none",
-                        }}
-                      >
-                        {item.label}
-                      </p>
-                    </div>
-                  );
-                })}
-              </div>
-            </aside>
           </div>
         </div>
+
+        {/* Nav items */}
+        <nav className="flex-1 px-2 py-4 flex flex-col" style={{ gap: "0.15rem" }}>
+          {navItems.filter((item) => (showNavTools ? true : item.active)).map((item) => {
+            const isLive =
+              interactive && ((!!item.slug && accessiblePages.some((p) => p.slug === item.slug)) || item.forceLive === true);
+            const isActive = item.active;
+
+            const inner = (
+              <div
+                title={collapsed ? item.label : undefined}
+                className="flex items-center rounded-md transition-colors duration-150"
+                style={{
+                  justifyContent: collapsed ? "center" : "flex-start",
+                  gap: "0.6rem",
+                  padding: collapsed ? "0.45rem" : "0.45rem 0.75rem",
+                  background: isActive ? "hsl(var(--primary))" : "transparent",
+                  cursor: isLive ? "pointer" : "default",
+                  opacity: !isActive && !isLive ? 0.45 : 1,
+                }}
+              >
+                <span
+                  className="text-xs flex-shrink-0"
+                  style={{ color: isActive ? "hsl(var(--primary-foreground))" : "hsl(var(--muted-foreground))" }}
+                >
+                  {item.icon}
+                </span>
+                {!collapsed && (
+                  <span
+                    className="whitespace-nowrap"
+                    style={{
+                      fontSize: "0.8rem",
+                      fontWeight: isActive ? 600 : 400,
+                      color: isActive ? "hsl(var(--primary-foreground))" : "hsl(var(--foreground))",
+                    }}
+                  >
+                    {item.label}
+                  </span>
+                )}
+              </div>
+            );
+
+            return isLive ? (
+              <Link key={item.label} href={`/${item.slug}`} className="no-underline">
+                {inner}
+              </Link>
+            ) : (
+              <div key={item.label}>{inner}</div>
+            );
+          })}
+        </nav>
+
+        {/* Collapse toggle */}
+        <div
+          className="px-2 pb-2 flex"
+          style={{ justifyContent: collapsed ? "center" : "flex-start" }}
+        >
+          <button
+            onClick={() => setCollapsed((c) => !c)}
+            className="w-5 h-5 flex items-center justify-center rounded border border-border bg-background text-muted-foreground shadow-sm"
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {collapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
+          </button>
+        </div>
+
+        {/* User + logout */}
+        <div
+          className="border-t border-border pt-4 flex items-center"
+          style={{
+            padding: collapsed ? "1rem 0 0" : "1rem 1.25rem 0",
+            justifyContent: collapsed ? "center" : "space-between",
+          }}
+        >
+          {!collapsed && (
+            <div>
+              <p className="text-xs font-medium text-foreground whitespace-nowrap">{session.name ?? session.email}</p>
+              <p className="text-xs text-muted-foreground whitespace-nowrap">{session.email}</p>
+            </div>
+          )}
+          <form action="/api/auth/logout" method="POST">
+            <button
+              type="submit"
+              title="Sign out"
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors duration-200 p-1"
+              style={{ background: "transparent", border: "none", cursor: "pointer" }}
+            >
+              →
+            </button>
+          </form>
+        </div>
+      </aside>
+
+      {/* Main content area */}
+      <div className="flex-1 flex overflow-hidden">
+        <main className="flex-1 p-8 overflow-y-auto">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1.5">
+            Platform
+          </p>
+          <h2 className="text-lg font-semibold text-foreground mb-6">Explore the tools</h2>
+
+          {showTools && (
+            <div className="grid grid-cols-2 gap-3">
+              {platformCards.map((card) => {
+                const isLive =
+                  interactive &&
+                  ((card.live && !!card.slug && accessiblePages.some((p) => p.slug === card.slug)) || card.forceLive === true);
+                const inner = (
+                  <div
+                    className="border border-border rounded-lg p-4 bg-background transition-colors duration-150 relative"
+                    style={{
+                      cursor: isLive ? "pointer" : "default",
+                      opacity: card.live && !isLive ? 0.5 : 1,
+                    }}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <p className="text-sm font-semibold text-foreground">{card.label}</p>
+                      {!card.live && (
+                        <span className="text-[0.6rem] font-bold px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground tracking-wide uppercase">
+                          Coming Soon
+                        </span>
+                      )}
+                      {isLive && (
+                        <span className="text-[0.6rem] font-bold px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground tracking-wide uppercase">
+                          Live
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{card.description}</p>
+                  </div>
+                );
+
+                return isLive ? (
+                  <Link key={card.label} href={`/${card.slug}`} className="no-underline">
+                    {inner}
+                  </Link>
+                ) : (
+                  <div key={card.label}>{inner}</div>
+                );
+              })}
+            </div>
+          )}
+        </main>
+
+        {/* Needs attention panel */}
+        <aside className="w-[30%] flex-shrink-0 border-l border-border p-8 overflow-y-auto bg-background">
+          <p className="text-sm font-bold text-foreground mb-5">Needs Attention</p>
+          <p className="text-[0.65rem] font-bold uppercase tracking-widest text-muted-foreground mb-3">
+            Checklist
+          </p>
+
+          <div className="flex flex-col gap-1.5">
+            {ATTENTION_ITEMS.map((item, i) => {
+              const dotColor = item.done
+                ? "hsl(var(--muted-foreground))"
+                : item.status === "alert"
+                  ? "rgb(220, 60, 40)"
+                  : item.status === "warning"
+                    ? "rgb(200, 130, 20)"
+                    : "hsl(var(--primary))";
+
+              return (
+                <div
+                  key={i}
+                  className="flex items-start gap-2.5 px-2.5 py-2 rounded-md"
+                  style={{
+                    border: `1px solid ${item.done ? "transparent" : "hsl(var(--border))"}`,
+                    opacity: item.done ? 0.45 : 1,
+                  }}
+                >
+                  <div
+                    className="w-3.5 h-3.5 rounded-full flex-shrink-0 mt-0.5 flex items-center justify-center"
+                    style={{
+                      border: `2px solid ${dotColor}`,
+                      background: item.done ? dotColor : "transparent",
+                    }}
+                  >
+                    {item.done && <span className="text-background text-[0.5rem]">✓</span>}
+                  </div>
+                  <p
+                    className="text-xs text-foreground leading-snug"
+                    style={{ textDecoration: item.done ? "line-through" : "none" }}
+                  >
+                    {item.label}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </aside>
       </div>
     </div>
   );

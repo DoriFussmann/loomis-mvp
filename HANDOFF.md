@@ -35,19 +35,26 @@ A lightweight multi-user web application built for **Loomis Insurance** with:
 ```
 /
 ├── app/
-│   ├── layout.tsx
+│   ├── layout.tsx                        # Root layout — Inter font (next/font/google), html/body only
 │   ├── page.tsx                          # Root router — sends user to /pnc, /benefits, /admin, or /login
 │   ├── (auth)/
-│   │   └── login/page.tsx
-│   ├── pnc/
-│   │   └── page.tsx                      # Property & Casualty dashboard (current primary user dashboard)
-│   ├── benefits/
-│   │   └── page.tsx                      # Benefits dashboard shell (layout-only for now)
-│   ├── employer-application/
-│   │   ├── page.tsx                      # Benefits flow for Employer Agreement extraction
-│   │   └── ui-client.tsx                 # Upload, scan, animated section results, summary, excel export
+│   │   └── login/page.tsx                # Standalone login — no global header
+│   ├── (app)/                            # Route group: all user-facing pages
+│   │   ├── layout.tsx                    # Provides SiteHeader + max-w-[1280px] mx-auto px-6 py-8 main
+│   │   ├── pnc/page.tsx                  # Property & Casualty dashboard
+│   │   ├── benefits/page.tsx             # Benefits dashboard
+│   │   ├── employer-application/
+│   │   │   ├── page.tsx
+│   │   │   └── ui-client.tsx             # Upload, scan, animated section results, summary, excel export
+│   │   ├── claims-validation/
+│   │   │   ├── page.tsx
+│   │   │   └── ui-client.tsx
+│   │   ├── loss-run-analyzer/
+│   │   │   └── page.tsx                  # Loss Run Analyzer — primary production feature
+│   │   └── test/
+│   │       └── page.tsx                  # Demo page
 │   ├── admin/
-│   │   ├── layout.tsx
+│   │   ├── layout.tsx                    # Admin top nav (logo + Admin badge + nav links + logout)
 │   │   ├── page.tsx
 │   │   ├── users/
 │   │   │   ├── page.tsx
@@ -55,11 +62,9 @@ A lightweight multi-user web application built for **Loomis Insurance** with:
 │   │   └── pages/
 │   │       ├── page.tsx
 │   │       └── [id]/page.tsx
-│   ├── loss-run-analyzer/
-│   │   └── page.tsx                      # Loss Run Analyzer — primary production feature
-│   └── test/
-│       └── page.tsx                      # Demo page
 ├── components/
+│   ├── site-header.tsx                   # Global top nav: Loomis logo + Sign out (used by (app)/ layout)
+│   ├── department-dashboard.tsx          # Dept dashboard with collapsible sidebar + tool cards
 │   ├── ui/                               # Reusable primitives
 │   └── admin/                            # Admin-specific components
 ├── data/
@@ -306,13 +311,17 @@ All responses: `{ success: boolean, data?: any, error?: string }`
 
 ## Design System Summary
 
-- **Font:** Inter 300/400/500 from Google Fonts
+- **Font:** Inter 300/400/500 via `next/font/google` (CSS variable `--font-inter`)
 - **Colors:** All via CSS custom properties (`hsl(var(--token))`), never hardcoded inline
 - **Theme:** Light by default; dark mode via `.dark` class on `<html>`
 - **Radius:** Base `0.5rem`
 - **Shadows:** `shadow-sm` max
 - **Icons:** Lucide React throughout
 - **Inline styles:** Use `hsl(var(--token))` syntax — raw `var(--token)` will not render correctly
+- **Max content width:** 1280px (`max-w-[1280px]`) everywhere
+- **Page spacing:** `px-6 py-8` on content wrappers, `gap-6` between cards, `mb-6` below headings
+- **Global header height:** `h-14` (56px) — provided by `SiteHeader` or `AdminLayout`
+- **Route groups:** `(auth)/` = no header; `(app)/` = SiteHeader + standard padding; `admin/` = admin top nav
 
 ---
 

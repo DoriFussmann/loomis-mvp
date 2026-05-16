@@ -149,13 +149,13 @@ export default function PageDetailPage({ params }: { params: { id: string } }) {
     }
   }
 
-  if (!page) return <div className="p-8 text-sm text-muted-foreground">Loading...</div>;
+  if (!page) return <div className="text-sm text-muted-foreground">Loading...</div>;
 
   const pagePrompts = prompts.filter((p) => p.pageSlug === page.slug);
   const cleanVars = vars.filter((v) => v.name.trim());
 
   return (
-    <div className="p-8">
+    <div>
       <Link href="/admin/pages" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6">
         <ArrowLeft className="w-4 h-4" /> Pages & Prompts
       </Link>

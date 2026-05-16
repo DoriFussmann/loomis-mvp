@@ -48,7 +48,7 @@ export default function UsersPage() {
   }
 
   return (
-    <div className="p-8">
+    <div>
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-xl font-normal">Users</h1>
