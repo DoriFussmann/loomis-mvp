@@ -101,6 +101,8 @@ function DepartmentDashboardInner({
     if (isDashboard) {
       router.push("/benefits");
     } else if (slug) {
+      setCollapsed(true);
+      setAttentionCollapsed(true);
       router.push(`/benefits?tool=${slug}`);
     }
   }
@@ -222,24 +224,23 @@ function DepartmentDashboardInner({
                         <div className="flex items-center justify-between mb-1.5">
                           <p className="text-sm font-medium text-foreground">{card.label}</p>
                           {!card.live && !card.forceLive && (
-                            <span className="text-[0.6rem] font-medium px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground tracking-wide uppercase">
-                              coming soon
+                            <span className="text-[0.6rem] font-medium px-1.5 py-0.5 rounded bg-muted text-muted-foreground tracking-wide uppercase">
+                              soon
                             </span>
                           )}
                           {isLive && (
-                            <span className="text-[0.6rem] font-medium px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground tracking-wide uppercase">
+                            <span className="text-[0.6rem] font-medium px-1.5 py-0.5 rounded bg-primary text-primary-foreground tracking-wide uppercase">
                               live
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed">{card.description}</p>
                       </div>
                     );
 
                     return isLive ? (
                       <button
                         key={card.label}
-                        onClick={() => card.slug && router.push(`/benefits?tool=${card.slug}`)}
+                        onClick={() => { if (card.slug) { setCollapsed(true); setAttentionCollapsed(true); router.push(`/benefits?tool=${card.slug}`); } }}
                         style={{ display: "block", width: "100%", height: "100%", textAlign: "left", background: "none", border: "none", padding: 0 }}
                       >
                         {inner}
