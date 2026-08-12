@@ -6,6 +6,10 @@ const nextConfig = {
     if (dev) {
       config.cache = false;
     }
+    config.resolve.alias = {
+      ...(config.resolve.alias || {}),
+      canvas: false,
+    };
     return config;
   },
 }

@@ -44,7 +44,7 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
-  if (pathname.startsWith("/api/employer-application") || pathname.startsWith("/api/claims-validation")) {
+  if (pathname.startsWith("/api/employer-application") || pathname.startsWith("/api/claims-validation") || pathname.startsWith("/api/gap-quote")) {
     if (!user) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
@@ -58,7 +58,8 @@ export async function middleware(request: NextRequest) {
     pathname === "/pnc" ||
     pathname === "/benefits" ||
     pathname === "/employer-application" ||
-    pathname === "/claims-validation"
+    pathname === "/claims-validation" ||
+    pathname === "/gap-quote"
   ) {
     if (!user) {
       return NextResponse.redirect(new URL("/login", request.url));
@@ -70,7 +71,8 @@ export async function middleware(request: NextRequest) {
     if (
       (pathname === "/benefits" ||
         pathname === "/employer-application" ||
-        pathname === "/claims-validation") &&
+        pathname === "/claims-validation" ||
+        pathname === "/gap-quote") &&
       !departments.includes("Benefits")
     ) {
       return NextResponse.redirect(new URL("/login", request.url));
@@ -107,7 +109,9 @@ export const config = {
     "/benefits",
     "/employer-application",
     "/claims-validation",
+    "/gap-quote",
     "/api/employer-application/:path*",
     "/api/claims-validation/:path*",
+    "/api/gap-quote/:path*",
   ],
 };

@@ -1,5 +1,13 @@
+import { v4 as uuidv4 } from "uuid";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import type { User, AppPage, Prompt, Department } from "./types";
+import type {
+  GapQuoteBucketKey,
+  GapQuoteCatalog,
+  GapQuoteRateRow,
+  GapQuoteSettings,
+  GapQuoteStateBucket,
+} from "./gapQuote/schema";
 
 interface UserRow {
   id: string;
@@ -245,4 +253,205 @@ export async function getPromptsByPage(slug: string): Promise<Prompt[]> {
 
   if (error) throw error;
   return (data ?? []).map((row) => toPrompt(row as PromptRow));
+}
+
+interface BucketRow {
+  bucket_key: string;
+  label: string;
+  states: string[] | null;
+  lives_min: number;
+  lives_max: number;
+  sort_order: number;
+}
+
+interface RateRow {
+  id: string;
+  bucket_key: string;
+  deductible: number | string;
+  benefit: number | string;
+  rate_ee_only: number | string;
+  rate_ee_spouse: number | string;
+  rate_ee_children: number | string;
+  rate_family: number | string;
+}
+
+interface SettingsRow {
+  id: string;
+  admin_fee: number | string;
+}
+
+function toNumber(value: number | string): number {
+  return typeof value === "number" ? value : Number(value);
+}
+
+function toBucket(row: BucketRow): GapQuoteStateBucket {
+  return {
+    bucketKey: row.bucket_key as GapQuoteBucketKey,
+    label: row.label,
+    states: row.states ?? [],
+    livesMin: row.lives_min,
+    livesMax: row.lives_max,
+    sortOrder: row.sort_order,
+  };
+}
+
+function toRate(row: RateRow): GapQuoteRateRow {
+  return {
+    id: row.id,
+    bucketKey: row.bucket_key as GapQuoteBucketKey,
+    deductible: toNumber(row.deductible),
+    benefit: toNumber(row.benefit),
+    rateEeOnly: toNumber(row.rate_ee_only),
+    rateEeSpouse: toNumber(row.rate_ee_spouse),
+    rateEeChildren: toNumber(row.rate_ee_children),
+    rateFamily: toNumber(row.rate_family),
+  };
+}
+
+export async function getGapQuoteBuckets(): Promise<GapQuoteStateBucket[]> {
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("gap_quote_state_buckets")
+    .select("bucket_key,label,states,lives_min,lives_max,sort_order")
+    .order("sort_order", { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map((row) => toBucket(row as BucketRow));
+}
+
+export async function getGapQuoteRates(): Promise<GapQuoteRateRow[]> {
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("gap_quote_rates")
+    .select("id,bucket_key,deductible,benefit,rate_ee_only,rate_ee_spouse,rate_ee_children,rate_family")
+    .order("deductible", { ascending: true })
+    .order("benefit", { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map((row) => toRate(row as RateRow));
+}
+
+export async function getGapQuoteSettings(): Promise<GapQuoteSettings> {
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("gap_quote_settings")
+    .select("id,admin_fee")
+    .eq("id", "default")
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return { id: "default", adminFee: 0 };
+  const row = data as SettingsRow;
+  return { id: row.id, adminFee: toNumber(row.admin_fee) };
+}
+
+export async function getGapQuoteCatalog(): Promise<GapQuoteCatalog> {
+  const [buckets, rates, settings] = await Promise.all([
+    getGapQuoteBuckets(),
+    getGapQuoteRates(),
+    getGapQuoteSettings(),
+  ]);
+  return { buckets, rates, settings };
+}
+
+export async function saveGapQuoteSettings(adminFee: number): Promise<GapQuoteSettings> {
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("gap_quote_settings")
+    .upsert({ id: "default", admin_fee: adminFee }, { onConflict: "id" })
+    .select("id,admin_fee")
+    .single();
+  if (error) throw error;
+  const row = data as SettingsRow;
+  return { id: row.id, adminFee: toNumber(row.admin_fee) };
+}
+
+export async function replaceGapQuoteCatalog(input: {
+  buckets: GapQuoteStateBucket[];
+  rates: GapQuoteRateRow[];
+}): Promise<GapQuoteCatalog> {
+  const supabase = createSupabaseAdminClient();
+
+  const { error: rateDeleteError } = await supabase.from("gap_quote_rates").delete().neq("id", "");
+  if (rateDeleteError) throw rateDeleteError;
+
+  const bucketPayload = input.buckets.map((bucket) => ({
+    bucket_key: bucket.bucketKey,
+    label: bucket.label,
+    states: bucket.states,
+    lives_min: bucket.livesMin,
+    lives_max: bucket.livesMax,
+    sort_order: bucket.sortOrder,
+  }));
+  const { error: bucketError } = await supabase
+    .from("gap_quote_state_buckets")
+    .upsert(bucketPayload, { onConflict: "bucket_key" });
+  if (bucketError) throw bucketError;
+
+  const ratePayload = input.rates.map((rate) => ({
+    id: rate.id,
+    bucket_key: rate.bucketKey,
+    deductible: rate.deductible,
+    benefit: rate.benefit,
+    rate_ee_only: rate.rateEeOnly,
+    rate_ee_spouse: rate.rateEeSpouse,
+    rate_ee_children: rate.rateEeChildren,
+    rate_family: rate.rateFamily,
+  }));
+  if (ratePayload.length > 0) {
+    const { error: rateError } = await supabase.from("gap_quote_rates").insert(ratePayload);
+    if (rateError) throw rateError;
+  }
+
+  return getGapQuoteCatalog();
+}
+
+export async function createGapQuoteRate(
+  rate: Omit<GapQuoteRateRow, "id"> & { id?: string }
+): Promise<GapQuoteRateRow> {
+  const supabase = createSupabaseAdminClient();
+  const id = rate.id ?? uuidv4();
+  const { data, error } = await supabase
+    .from("gap_quote_rates")
+    .insert({
+      id,
+      bucket_key: rate.bucketKey,
+      deductible: rate.deductible,
+      benefit: rate.benefit,
+      rate_ee_only: rate.rateEeOnly,
+      rate_ee_spouse: rate.rateEeSpouse,
+      rate_ee_children: rate.rateEeChildren,
+      rate_family: rate.rateFamily,
+    })
+    .select("id,bucket_key,deductible,benefit,rate_ee_only,rate_ee_spouse,rate_ee_children,rate_family")
+    .single();
+  if (error) throw error;
+  return toRate(data as RateRow);
+}
+
+export async function updateGapQuoteRate(
+  id: string,
+  patch: Partial<Omit<GapQuoteRateRow, "id">>
+): Promise<GapQuoteRateRow> {
+  const supabase = createSupabaseAdminClient();
+  const payload: Record<string, unknown> = {};
+  if (patch.bucketKey !== undefined) payload.bucket_key = patch.bucketKey;
+  if (patch.deductible !== undefined) payload.deductible = patch.deductible;
+  if (patch.benefit !== undefined) payload.benefit = patch.benefit;
+  if (patch.rateEeOnly !== undefined) payload.rate_ee_only = patch.rateEeOnly;
+  if (patch.rateEeSpouse !== undefined) payload.rate_ee_spouse = patch.rateEeSpouse;
+  if (patch.rateEeChildren !== undefined) payload.rate_ee_children = patch.rateEeChildren;
+  if (patch.rateFamily !== undefined) payload.rate_family = patch.rateFamily;
+
+  const { data, error } = await supabase
+    .from("gap_quote_rates")
+    .update(payload)
+    .eq("id", id)
+    .select("id,bucket_key,deductible,benefit,rate_ee_only,rate_ee_spouse,rate_ee_children,rate_family")
+    .single();
+  if (error) throw error;
+  return toRate(data as RateRow);
+}
+
+export async function deleteGapQuoteRate(id: string): Promise<void> {
+  const supabase = createSupabaseAdminClient();
+  const { error } = await supabase.from("gap_quote_rates").delete().eq("id", id);
+  if (error) throw error;
 }

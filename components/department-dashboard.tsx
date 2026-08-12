@@ -6,17 +6,18 @@ import {
   ChevronLeft, ChevronRight,
   LayoutGrid, FileBarChart2, RefreshCw, FileCheck2,
   BookOpen, TrendingUp, Shield, Building2,
-  Briefcase, UserCheck, Layers,
+  Briefcase, UserCheck, Layers, Calculator,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { AppPage, SessionPayload } from "@/lib/types";
 import { EmployerApplicationClient } from "@/app/(app)/employer-application/ui-client";
 import { ClaimsValidationClient } from "@/app/(app)/claims-validation/ui-client";
+import { GapQuoteClient } from "@/app/(app)/gap-quote/ui-client";
 
 const NAV_ICON_MAP: Record<string, LucideIcon> = {
   LayoutGrid, FileBarChart2, RefreshCw, FileCheck2,
   BookOpen, TrendingUp, Shield, Building2,
-  Briefcase, UserCheck, Layers,
+  Briefcase, UserCheck, Layers, Calculator,
 };
 
 const NAV_ITEMS = [
@@ -36,6 +37,7 @@ export interface DepartmentNavItem {
   active?: boolean;
   slug?: string;
   forceLive?: boolean;
+  heading?: boolean;
 }
 
 export interface DepartmentToolCard {
@@ -130,7 +132,18 @@ function DepartmentDashboardInner({
           className="flex-1 pb-4 flex flex-col"
           style={{ gap: "0.4rem", padding: collapsed ? "0 0 1rem" : "0 0.5rem 1rem", alignItems: collapsed ? "center" : "stretch" }}
         >
-          {navItems.filter((item) => (showNavTools ? true : item.active)).map((item) => {
+          {navItems.filter((item) => (showNavTools ? true : item.active || item.heading)).map((item) => {
+            if (item.heading) {
+              if (collapsed) return <div key={item.label} className="h-2" />;
+              return (
+                <p
+                  key={item.label}
+                  className="text-[10px] font-medium text-foreground/40 px-3 pt-3 pb-1"
+                >
+                  {item.label}
+                </p>
+              );
+            }
             const isDashboard = !item.slug && !!item.active;
             const isLive =
               isDashboard ||
@@ -170,7 +183,7 @@ function DepartmentDashboardInner({
               >
                 {Icon && <Icon size={11} className="flex-shrink-0 opacity-60" />}
                 <span className={["text-xs whitespace-nowrap", isActive ? "font-medium" : "font-light"].join(" ")}>
-                  {item.label.toLowerCase()}
+                  {item.label}
                 </span>
               </div>
             );
@@ -196,13 +209,14 @@ function DepartmentDashboardInner({
         <main className="flex-1 min-w-0 p-6 overflow-y-auto">
           {activeTool === "employer-application" && <EmployerApplicationClient />}
           {activeTool === "claims-validation" && <ClaimsValidationClient />}
+          {activeTool === "gap-quote" && <GapQuoteClient />}
 
           {!activeTool && (
             <>
               <p className="text-[10px] font-medium uppercase tracking-widest text-foreground/40 mb-1.5">
                 platform
               </p>
-              <h2 className="text-lg font-light text-foreground mb-6">explore the tools</h2>
+              <h2 className="text-lg font-light text-foreground mb-6">Explore the Tools</h2>
 
               {showTools && (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem", width: "100%" }}>
@@ -273,7 +287,7 @@ function DepartmentDashboardInner({
 
           {!attentionCollapsed && (
             <div className="px-8 pb-8 overflow-y-auto flex-1">
-              <p className="text-sm font-medium text-foreground mb-5">needs attention</p>
+              <p className="text-sm font-medium text-foreground mb-5">Needs Attention</p>
               <p className="text-[10px] font-medium uppercase tracking-widest text-foreground/40 mb-3">
                 checklist
               </p>

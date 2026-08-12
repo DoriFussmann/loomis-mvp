@@ -223,7 +223,7 @@ export async function POST(req: NextRequest) {
 
     // ── STAGE 1: CLASSIFIER ──────────────────────────────────────────────────
     const classifierResponse = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1000,
       system: 'You are an expert insurance document analyst. Your only job is to classify a loss run document and return a metadata JSON object. You do not analyze claims. You only identify what type of document this is and what data fields are present.',
       messages: [
@@ -273,7 +273,7 @@ export async function POST(req: NextRequest) {
     )
 
     const extractorResponse = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 8000,
       system: 'You are an expert insurance claims analyst. You extract structured data from loss run documents to produce client reports. You only populate fields supported by the actual document. You never invent or estimate figures. You write plain-language observations a business owner can understand.',
       messages: [

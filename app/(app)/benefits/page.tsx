@@ -6,6 +6,8 @@ const BENEFITS_NAV_ITEMS: DepartmentNavItem[] = [
   { label: "Dashboard", icon: "LayoutGrid", active: true },
   { label: "Employer Application", icon: "Briefcase", slug: "employer-application", forceLive: true },
   { label: "Client Validation", icon: "UserCheck", slug: "claims-validation", forceLive: true },
+  { label: "GAP Quote", icon: "Calculator", slug: "gap-quote", forceLive: true },
+  { label: "Other Tools", heading: true },
   { label: "Consolidation Tool", icon: "Layers" },
 ];
 
@@ -20,6 +22,12 @@ const BENEFITS_TOOL_CARDS: DepartmentToolCard[] = [
     label: "Client Validation",
     description: "Validate and verify patient identity against the client database.",
     slug: "claims-validation",
+    forceLive: true,
+  },
+  {
+    label: "GAP Quote",
+    description: "Turn a broker email and census into a branded GAP Medical proposal.",
+    slug: "gap-quote",
     forceLive: true,
   },
   {

@@ -1,12 +1,13 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, FileText, LayoutDashboard, LogOut } from "lucide-react";
+import { Users, FileText, LayoutDashboard, LogOut, Table2 } from "lucide-react";
 
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/pages", label: "Pages & Prompts", icon: FileText },
+  { href: "/admin/gap-rates", label: "GAP Rates", icon: Table2 },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

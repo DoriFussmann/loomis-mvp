@@ -23,9 +23,11 @@ A lightweight multi-user web application built for **Loomis Insurance** with:
 | Language | TypeScript (strict) | Type safety, maintainability |
 | Styling | Tailwind CSS + inline styles | Matches design system spec; inline styles used where CSS variables require `hsl()` wrapping |
 | Auth | Supabase Auth (email/password) | Managed auth, secure session cookies |
-| Persistence | Supabase Postgres (`users`, `pages`, `prompts`) | Durable production data on Vercel |
-| AI | Anthropic SDK (`claude-sonnet-4-20250514`) | Two-stage PDF extraction |
-| Excel Export | `xlsx` npm package | Client-side Excel generation |
+| Persistence | Supabase Postgres (`users`, `pages`, `prompts`, `clients`, `gap_quote_*`) | Durable production data on Vercel |
+| AI | Anthropic SDK (`claude-sonnet-4-6`) | Two-stage PDF extraction + GAP email parse |
+| Excel | `xlsx` npm package | Census parse, rate-card import, Excel export |
+| PDF generation | `@react-pdf/renderer` | Branded GAP quote proposals |
+| PDF read | `pdf-lib` | Form-field extraction only (not generation) |
 | Deployment | Vercel (GitHub integration) | Zero-config, works with App Router |
 
 ---
@@ -49,6 +51,9 @@ A lightweight multi-user web application built for **Loomis Insurance** with:
 │   │   ├── claims-validation/
 │   │   │   ├── page.tsx
 │   │   │   └── ui-client.tsx
+│   │   ├── gap-quote/
+│   │   │   ├── page.tsx
+│   │   │   └── ui-client.tsx             # Email + census → checks → tiers → proposal
 │   │   ├── loss-run-analyzer/
 │   │   │   └── page.tsx                  # Loss Run Analyzer — primary production feature
 │   │   └── test/
@@ -59,9 +64,11 @@ A lightweight multi-user web application built for **Loomis Insurance** with:
 │   │   ├── users/
 │   │   │   ├── page.tsx
 │   │   │   └── [id]/page.tsx
-│   │   └── pages/
-│   │       ├── page.tsx
-│   │       └── [id]/page.tsx
+│   │   ├── pages/
+│   │   │   ├── page.tsx
+│   │   │   └── [id]/page.tsx
+│   │   └── gap-rates/
+│   │       └── page.tsx                  # Rate-card import + admin fee + rate rows
 ├── components/
 │   ├── site-header.tsx                   # Global top nav: Loomis logo + Sign out (used by (app)/ layout)
 │   ├── department-dashboard.tsx          # Dept dashboard with collapsible sidebar + tool cards
@@ -83,7 +90,19 @@ A lightweight multi-user web application built for **Loomis Insurance** with:
 │   ├── employerApplication/
 │   │   ├── schema.ts                     # Canonical section/field map for Employer Agreement
 │   │   └── extract.ts                    # Hybrid extraction (form fields + AI fallback)
+│   ├── gapQuote/
+│   │   ├── schema.ts
+│   │   ├── extract.ts                    # Anthropic parse of pasted broker email
+│   │   ├── parseCensus.ts                # xlsx census → subscriber + tier counts
+│   │   ├── parseRateCard.ts              # Locked mapping to Loomis U100 rate card
+│   │   ├── eligibility.ts
+│   │   ├── rateLookup.ts
+│   │   ├── analyze.ts
+│   │   └── proposalPdf.tsx               # 5-page branded proposal
 │   └── exportToExcel.ts                  # Client-side Excel export for loss run reports
+├── reference/gap-quote/
+│   ├── rate-card.xlsx                    # Loomis U100 rate card (importer source of truth)
+│   └── proposal-sample.pdf               # Branded proposal layout reference
 ├── app/api/employer-application/
 │   └── extract/route.ts                  # POST — Employer Agreement field extraction
 ├── lib/exportEmployerApplicationToExcel.ts # Client-side Field/Value export for Employer Application
@@ -92,7 +111,8 @@ A lightweight multi-user web application built for **Loomis Insurance** with:
 │   └── verify-supabase-parity.mjs        # JSON vs Supabase parity check
 ├── supabase/
 │   └── migrations/
-│       └── 20260515_initial_schema.sql   # Tables + RLS policies + helper functions
+│       ├── 20260515_initial_schema.sql   # Tables + RLS policies + helper functions
+│       └── 20260812_gap_quote_rates.sql  # GAP rate buckets, rates, admin fee
 ├── app/api/
 │   ├── auth/
 │   │   ├── login/route.ts
@@ -103,7 +123,12 @@ A lightweight multi-user web application built for **Loomis Insurance** with:
 │   │   ├── pages/route.ts
 │   │   ├── pages/[id]/route.ts
 │   │   ├── prompts/route.ts
-│   │   └── prompts/[id]/route.ts
+│   │   ├── prompts/[id]/route.ts
+│   │   ├── gap-rates/route.ts
+│   │   ├── gap-rates/[id]/route.ts
+│   │   └── gap-rates/import/route.ts
+│   ├── gap-quote/
+│   │   └── analyze/route.ts              # POST — email + census → checks + pricing
 │   ├── analyze-loss-run/
 │   │   └── route.ts                      # POST — two-stage PDF extraction via Anthropic
 │   └── run-prompt/route.ts
@@ -306,6 +331,47 @@ All responses: `{ success: boolean, data?: any, error?: string }`
 | POST | `/api/run-prompt` | User (page access) | Run a prompt with variable inputs |
 | POST | `/api/analyze-loss-run` | User (session) | Two-stage loss run PDF extraction |
 | POST | `/api/employer-application/extract` | Benefits/Admin | Extract employer agreement sections/fields, missing flags, and completion metrics |
+| POST | `/api/gap-quote/analyze` | Benefits/Admin | Parse email + census, run eligibility checks, price passing groups |
+| GET | `/api/admin/gap-rates` | Admin | Load GAP rate catalog (buckets, rates, admin fee) |
+| POST | `/api/admin/gap-rates` | Admin | Create a rate row, or save admin fee when `adminFee` is sent without deductible |
+| PATCH | `/api/admin/gap-rates/[id]` | Admin | Update a rate row |
+| DELETE | `/api/admin/gap-rates/[id]` | Admin | Delete a rate row |
+| POST | `/api/admin/gap-rates/import` | Admin | Replace-refresh rates from an uploaded U100 rate card (`fileBase64`) |
+
+---
+
+## GAP Quote Automation
+
+Benefits-department tool (`department === "Benefits"` or admin). Embedded on `/benefits?tool=gap-quote` with `forceLive: true` (no `pages.json` row). Standalone route: `/gap-quote`.
+
+### Flow
+1. Paste email subject/body and attach one `.xlsx` census per billing group
+2. Checks (staggered): split detection, subscriber lives 5–99, situs state bucket, plan-design match
+3. Tier counts for passing groups: EE / EE+SP / EE+CH / Family
+4. Results with base rates + admin fee as its own line; download a 5-page branded PDF per group
+
+Census parsing keys off `Rel Code` when present (`SB` subscriber, `SP` spouse, `DE` dependent) and also accepts longer aliases (`Employee`, `Subscriber`, etc.) because broker formats vary. Subscriber tier counts prefer the `Tier Coverage` column on subscriber rows rather than reconstructing family composition. Entity names are proposed from filename, census employer/group fields, and email candidates, with a confidence label. The user must confirm (or type a custom name) before See Proposal / PDF export, except the 1-file / 1-group case which auto-confirms. Results include a **See Proposal** modal for inline edits; Save stays in React state, and PDF export uses the current (possibly edited) values.
+
+Quotes are ephemeral (React state only). The only persisted data is the rate table.
+
+### Rate card mapping (`reference/gap-quote/rate-card.xlsx`, sheet `Rate cards`)
+Header row: `Deductible` | `Limit` | five repeating blocks of `EE` | `EE + SP` | `EE + CH` | `FAMILY`
+
+| Columns | Bucket | States |
+|---|---|---|
+| C–F | Standard States | AL, AR, AZ, DC, FL (5–50 lives), GA, HI, IA, IL, KS, KY, LA, MA, MS, NE, NC, NV, OK, OR, PA, SC, SD, TN, TX, UT, VA, WI, WV, WY |
+| G–J | 60% LR states | CO, IN, MO, NH |
+| K–N | OH | OH |
+| O–R | MI | MI |
+| S–V | FL 50–100 lives | FL when subscriber count is 51–99 |
+
+FL uses Standard when lives ≤ 50 and the FL 50–100 bucket when lives ≥ 51. Plan design is deductible × Limit (core benefit).
+
+### Admin
+`/admin/gap-rates` — import the spreadsheet (replace-refresh), edit the flat admin fee, add/delete rate rows. Apply `supabase/migrations/20260812_gap_quote_rates.sql` in the Supabase SQL editor before first use, then import `reference/gap-quote/rate-card.xlsx`.
+
+### PDF
+`@react-pdf/renderer` 5-page layout matching `reference/gap-quote/proposal-sample.pdf` (cover, about, policyholder info, plan details + monthly rates, bind/signature). `pdf-lib` is not used for generation.
 
 ---
 
@@ -338,6 +404,7 @@ npm run dev
 ```bash
 # 1) Apply SQL in Supabase SQL editor:
 #    supabase/migrations/20260515_initial_schema.sql
+#    supabase/migrations/20260812_gap_quote_rates.sql
 
 # 2) Import legacy JSON data into Supabase:
 npm run import:supabase
