@@ -3,7 +3,7 @@ import { extractGapQuoteEmail } from "./extract";
 import { parseCensusBase64 } from "./parseCensus";
 import { runGroupChecks } from "./eligibility";
 import { findRate, formatPlanDesign, normalizeState } from "./rateLookup";
-import { proposeEntityName } from "./matchEntity";
+import { proposeEntityNamesForBatch } from "./matchEntity";
 import type {
   AnalyzedGroup,
   AnalyzeGapQuoteInput,
@@ -43,7 +43,7 @@ function todayIssued(): string {
 
 function priceGroup(
   extract: EmailGroupExtract,
-  proposal: ReturnType<typeof proposeEntityName>,
+  proposal: { proposedName: string; nameConfidence: "high" | "medium" | "none"; nameConfirmed: boolean },
   candidateGroupNames: string[],
   censusEmployerName: string,
   census: AnalyzedGroup["census"],
@@ -112,18 +112,26 @@ export async function analyzeGapQuote(
     .filter(Boolean);
   const shared = sharedExtract(extracted.groups);
 
-  const groups: AnalyzedGroup[] = input.attachments.map((attachment) => {
-    const census = parseCensusBase64(attachment.fileBase64, attachment.fileName);
-    const proposal = proposeEntityName({
-      fileName: attachment.fileName,
-      censusEmployerName: census.censusEmployerName,
-      candidateGroupNames,
-      fileCount: groupCount,
-    });
+  const parsed = input.attachments.map((attachment) => ({
+    attachment,
+    census: parseCensusBase64(attachment.fileBase64, attachment.fileName),
+  }));
+
+  const proposals = proposeEntityNamesForBatch(
+    parsed.map((item) => ({
+      fileName: item.attachment.fileName,
+      censusEmployerName: item.census.censusEmployerName,
+    })),
+    candidateGroupNames
+  );
+
+  const groups: AnalyzedGroup[] = parsed.map((item, index) => {
+    const { attachment, census } = item;
+    const proposal = proposals[index];
 
     const matchedExtract =
       proposal.proposedName
-        ? extracted.groups.find((item) => item.groupName.trim() === proposal.proposedName)
+        ? extracted.groups.find((group) => group.groupName.trim() === proposal.proposedName)
         : undefined;
     const extract = matchedExtract
       ? { ...shared, ...matchedExtract, presentedBy: matchedExtract.presentedBy || shared.presentedBy }
