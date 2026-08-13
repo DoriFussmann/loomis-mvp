@@ -8,7 +8,15 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import type { AnalyzedGroup, AnalyzeGapQuoteResult, GroupCheck, NameConfidence, PricedGroup } from "@/lib/gapQuote/schema";
+import {
+  ADMIN_FEE_FOOTNOTE,
+  displayTierRates,
+  type AnalyzedGroup,
+  type AnalyzeGapQuoteResult,
+  type GroupCheck,
+  type NameConfidence,
+  type PricedGroup,
+} from "@/lib/gapQuote/schema";
 
 type Screen = "input" | "checks" | "tiers" | "results";
 
@@ -567,11 +575,12 @@ function ResultCard({
 }) {
   const priced: PricedGroup | null = group.priced;
   if (!priced) return null;
+  const rates = displayTierRates(priced.baseRates, priced.adminFee);
   const rows = [
-    ["Employee Only", priced.baseRates.eeOnly],
-    ["Employee + Spouse", priced.baseRates.eeSpouse],
-    ["Employee + Child(ren)", priced.baseRates.eeChildren],
-    ["Family", priced.baseRates.family],
+    ["Employee Only", rates.eeOnly],
+    ["Employee + Spouse", rates.eeSpouse],
+    ["Employee + Child(ren)", rates.eeChildren],
+    ["Family", rates.family],
   ] as const;
 
   return (
@@ -593,10 +602,7 @@ function ResultCard({
               <span>{money(rate)}</span>
             </div>
           ))}
-          <div className="flex items-center justify-between text-sm pt-1">
-            <span>Admin Fee</span>
-            <span>{money(priced.adminFee)}</span>
-          </div>
+          <p className="text-xs text-muted-foreground pt-1">{ADMIN_FEE_FOOTNOTE}</p>
         </div>
         <div className="flex flex-wrap gap-2 mt-4">
           <Button onClick={onSeeProposal} disabled={!group.nameConfirmed}>
@@ -636,8 +642,10 @@ function ProposalModal({
     setDraft((prev) => (prev ? { ...prev, [key]: value } : prev));
   }
 
-  function setRate(key: keyof PricedGroup["baseRates"], value: number) {
-    setDraft((prev) => (prev ? { ...prev, baseRates: { ...prev.baseRates, [key]: value } } : prev));
+  function setDisplayRate(key: keyof PricedGroup["baseRates"], value: number) {
+    setDraft((prev) =>
+      prev ? { ...prev, baseRates: { ...prev.baseRates, [key]: value - prev.adminFee } } : prev
+    );
   }
 
   return (
@@ -670,12 +678,28 @@ function ProposalModal({
           <Field label="Coverage Type" value={draft.coverageType} onChange={(value) => setField("coverageType", value)} />
           <Field label="Underwriting Basis" value={draft.underwritingBasis} onChange={(value) => setField("underwritingBasis", value)} />
           <Field label="Employer Contribution" value={draft.employerContribution} onChange={(value) => setField("employerContribution", value)} />
-          <NumberField label="Employee Only Rate" value={draft.baseRates.eeOnly} onChange={(value) => setRate("eeOnly", value)} />
-          <NumberField label="Employee + Spouse Rate" value={draft.baseRates.eeSpouse} onChange={(value) => setRate("eeSpouse", value)} />
-          <NumberField label="Employee + Child(ren) Rate" value={draft.baseRates.eeChildren} onChange={(value) => setRate("eeChildren", value)} />
-          <NumberField label="Family Rate" value={draft.baseRates.family} onChange={(value) => setRate("family", value)} />
-          <NumberField label="Admin Fee" value={draft.adminFee} onChange={(value) => setField("adminFee", value)} />
+          <NumberField
+            label="Employee Only Rate"
+            value={draft.baseRates.eeOnly + draft.adminFee}
+            onChange={(value) => setDisplayRate("eeOnly", value)}
+          />
+          <NumberField
+            label="Employee + Spouse Rate"
+            value={draft.baseRates.eeSpouse + draft.adminFee}
+            onChange={(value) => setDisplayRate("eeSpouse", value)}
+          />
+          <NumberField
+            label="Employee + Child(ren) Rate"
+            value={draft.baseRates.eeChildren + draft.adminFee}
+            onChange={(value) => setDisplayRate("eeChildren", value)}
+          />
+          <NumberField
+            label="Family Rate"
+            value={draft.baseRates.family + draft.adminFee}
+            onChange={(value) => setDisplayRate("family", value)}
+          />
         </div>
+        <p className="text-xs text-muted-foreground px-6 -mt-1 pb-2">{ADMIN_FEE_FOOTNOTE}</p>
         <div className="flex flex-wrap gap-2 border-t border-border px-6 py-4">
           <Button onClick={() => onSave(draft)}>Save</Button>
           <Button variant="outline" onClick={() => onDownload(draft)} disabled={downloading}>

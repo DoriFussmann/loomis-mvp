@@ -260,6 +260,8 @@ SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
 IMPORT_USER_PASSWORD=<optional migration password default>
 ```
 
+`NEXT_PUBLIC_SUPABASE_URL` must be the project origin only (`https://<ref>.supabase.co`). Do not paste the REST endpoint (`.../rest/v1/`) — that makes login fail with "Invalid credentials".
+
 ### `.env.example` (committed — template only)
 ```
 ANTHROPIC_API_KEY=
@@ -348,7 +350,7 @@ Benefits-department tool (`department === "Benefits"` or admin). Embedded on `/b
 1. Paste email subject/body and attach one `.xlsx` census per billing group
 2. Checks (staggered): split detection, subscriber lives 5–99, situs state bucket, plan-design match
 3. Tier counts for passing groups: EE / EE+SP / EE+CH / Family
-4. Results with base rates + admin fee as its own line; download a 5-page branded PDF per group
+4. Results and proposal Monthly Rates show one consolidated rate per tier (base rate + admin fee already summed). A footnote reads: "The rates above include an administrative fee." Un-summed base rates stay internal (admin rate table). See Proposal edits consolidated tier rates only. Download a 5-page branded PDF per group.
 
 Census parsing keys off `Rel Code` when present (`SB` subscriber, `SP` spouse, `DE` dependent) and also accepts longer aliases (`Employee`, `Subscriber`, etc.) because broker formats vary. Subscriber tier counts prefer the `Tier Coverage` column on subscriber rows rather than reconstructing family composition. Entity names are proposed from filename, census employer/group fields, and email candidates, with a confidence label. A candidate name is assigned at most once per batch; if two files are genuinely ambiguous (no unique filename or in-file signal), both stay low-confidence with every candidate in the dropdown. The user must confirm (or type a custom name) before See Proposal / PDF export, except the 1-file / 1-group case which auto-confirms. Results include a **See Proposal** modal for inline edits; Save stays in React state, and PDF export uses the current (possibly edited) values.
 
@@ -371,7 +373,7 @@ FL uses Standard when lives ≤ 50 and the FL 50–100 bucket when lives ≥ 51.
 `/admin/gap-rates` — import the spreadsheet (replace-refresh), edit the flat admin fee, add/delete rate rows. Apply `supabase/migrations/20260812_gap_quote_rates.sql` in the Supabase SQL editor before first use, then import `reference/gap-quote/rate-card.xlsx`.
 
 ### PDF
-`@react-pdf/renderer` 5-page layout matching `reference/gap-quote/proposal-sample.pdf` (cover, about, policyholder info, plan details + monthly rates, bind/signature). `pdf-lib` is not used for generation.
+`@react-pdf/renderer` 5-page layout matching `reference/gap-quote/proposal-sample.pdf` (cover, about, policyholder info, plan details + monthly rates, bind/signature). Monthly Rates lists four consolidated tier rates (not an itemized base / admin-fee / total breakdown). `pdf-lib` is not used for generation.
 
 ---
 

@@ -93,6 +93,18 @@ export interface TierRates {
   family: number;
 }
 
+/** Proposal/display rates: each tier's un-summed base rate plus the flat admin fee. */
+export function displayTierRates(baseRates: TierRates, adminFee: number): TierRates {
+  return {
+    eeOnly: baseRates.eeOnly + adminFee,
+    eeSpouse: baseRates.eeSpouse + adminFee,
+    eeChildren: baseRates.eeChildren + adminFee,
+    family: baseRates.family + adminFee,
+  };
+}
+
+export const ADMIN_FEE_FOOTNOTE = "The rates above include an administrative fee.";
+
 export type NameConfidence = "high" | "medium" | "none";
 
 export interface PricedGroup {

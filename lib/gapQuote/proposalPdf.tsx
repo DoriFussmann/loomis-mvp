@@ -1,5 +1,5 @@
 import { Document, Page, Text, View, Image, StyleSheet } from "@react-pdf/renderer";
-import type { PricedGroup } from "./schema";
+import { ADMIN_FEE_FOOTNOTE, displayTierRates, type PricedGroup } from "./schema";
 
 const NAVY = "#0B3A5B";
 const GREEN = "#2E7D32";
@@ -77,6 +77,7 @@ const styles = StyleSheet.create({
   gridLabel: { width: "55%", padding: 6, fontSize: 9 },
   gridValue: { width: "45%", padding: 6, fontSize: 9, textAlign: "right", fontFamily: "Helvetica-Bold" },
   disclaimer: { fontSize: 8, color: MUTED, lineHeight: 1.4, marginTop: 10 },
+  rateFootnote: { fontSize: 8, color: MUTED, lineHeight: 1.4, paddingHorizontal: 6, paddingTop: 8, paddingBottom: 6 },
   footer: {
     position: "absolute",
     left: 48,
@@ -148,12 +149,7 @@ export function GapQuoteProposalPdf({
 }) {
   const planLabel = group.planDesignLabel || `${money(group.deductible)} / ${money(group.benefit)}`;
   const issued = issuedDate || group.issuedDate;
-  const total = {
-    eeOnly: group.baseRates.eeOnly + group.adminFee,
-    eeSpouse: group.baseRates.eeSpouse + group.adminFee,
-    eeChildren: group.baseRates.eeChildren + group.adminFee,
-    family: group.baseRates.family + group.adminFee,
-  };
+  const rates = displayTierRates(group.baseRates, group.adminFee);
 
   return (
     <Document title={`GAP Quote Proposal — ${group.employerName}`}>
@@ -237,15 +233,11 @@ export function GapQuoteProposalPdf({
           <PlanRow label="Durable Medical Equipment Benefit" value="Covered by Outpatient Benefit" alt />
           <PlanRow label="Laboratory Testing Benefit" value="Covered by Outpatient Benefit" />
           <Text style={styles.groupHeader}>Monthly Rates</Text>
-          <PlanRow label="Employee Only" value={money(group.baseRates.eeOnly)} alt />
-          <PlanRow label="Employee + Spouse" value={money(group.baseRates.eeSpouse)} />
-          <PlanRow label="Employee + Child(ren)" value={money(group.baseRates.eeChildren)} alt />
-          <PlanRow label="Family" value={money(group.baseRates.family)} />
-          <PlanRow label="Admin Fee" value={money(group.adminFee)} alt />
-          <PlanRow label="Employee Only Total" value={money(total.eeOnly)} />
-          <PlanRow label="Employee + Spouse Total" value={money(total.eeSpouse)} alt />
-          <PlanRow label="Employee + Child(ren) Total" value={money(total.eeChildren)} />
-          <PlanRow label="Family Total" value={money(total.family)} alt />
+          <PlanRow label="Employee Only" value={money(rates.eeOnly)} alt />
+          <PlanRow label="Employee + Spouse" value={money(rates.eeSpouse)} />
+          <PlanRow label="Employee + Child(ren)" value={money(rates.eeChildren)} alt />
+          <PlanRow label="Family" value={money(rates.family)} />
+          <Text style={styles.rateFootnote}>{ADMIN_FEE_FOOTNOTE}</Text>
         </View>
         <Text style={styles.disclaimer}>
           This Coverage supplements the Covered Person's Health Benefit Plan and is available only while an underlying Health Benefit Plan is continuously maintained.

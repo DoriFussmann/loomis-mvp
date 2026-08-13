@@ -6,8 +6,20 @@ function readEnv(key: string): string {
   return value;
 }
 
+function normalizeSupabaseUrl(raw: string): string {
+  try {
+    const parsed = new URL(raw.trim());
+    parsed.pathname = "/";
+    parsed.search = "";
+    parsed.hash = "";
+    return parsed.origin;
+  } catch {
+    throw new Error("NEXT_PUBLIC_SUPABASE_URL must be the project origin, e.g. https://<project-ref>.supabase.co");
+  }
+}
+
 export function getSupabaseUrl(): string {
-  return readEnv("NEXT_PUBLIC_SUPABASE_URL");
+  return normalizeSupabaseUrl(readEnv("NEXT_PUBLIC_SUPABASE_URL"));
 }
 
 export function getSupabaseAnonKey(): string {
