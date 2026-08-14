@@ -1,7 +1,7 @@
 const SENDGRID_SEND_URL = "https://api.sendgrid.com/v3/mail/send";
 
 export function getGapQuoteFromEmail(): string {
-  return process.env.GAP_QUOTE_FROM_EMAIL?.trim() || "gapquote@parse.epicaiproducts.com";
+  return process.env.GAP_QUOTE_FROM_EMAIL?.trim() || "gapquote@epicaiproducts.com";
 }
 
 export function getGapQuotePublicBaseUrl(): string {

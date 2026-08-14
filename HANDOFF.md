@@ -272,7 +272,7 @@ SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
 IMPORT_USER_PASSWORD=<optional migration password default>
 SENDGRID_API_KEY=<sendgrid api key>
 GAP_QUOTE_INBOUND_WEBHOOK_SECRET=<random token for inbound webhook URL>
-GAP_QUOTE_FROM_EMAIL=gapquote@parse.epicaiproducts.com
+GAP_QUOTE_FROM_EMAIL=gapquote@epicaiproducts.com
 GAP_QUOTE_PUBLIC_BASE_URL=https://www.epicaiproducts.com
 ```
 
@@ -287,7 +287,7 @@ SUPABASE_SERVICE_ROLE_KEY=
 IMPORT_USER_PASSWORD=
 SENDGRID_API_KEY=
 GAP_QUOTE_INBOUND_WEBHOOK_SECRET=
-GAP_QUOTE_FROM_EMAIL=gapquote@parse.epicaiproducts.com
+GAP_QUOTE_FROM_EMAIL=gapquote@epicaiproducts.com
 GAP_QUOTE_PUBLIC_BASE_URL=https://www.epicaiproducts.com
 ```
 
@@ -412,7 +412,7 @@ Apex MX stays on **Google Workspace** (`aspmx.l.google.com` etc.). Inbound parse
 
 1. **Inbound MX (done).** `parse.epicaiproducts.com` MX → `mx.sendgrid.net`. SendGrid Inbound Parse host is `parse.epicaiproducts.com`. Receiving address: `gapquote@parse.epicaiproducts.com`.
 2. **Inbound Parse destination.** `https://www.epicaiproducts.com/api/gap-quote/inbound?token=<GAP_QUOTE_INBOUND_WEBHOOK_SECRET>`. Leave “POST the raw, full MIME message” **unchecked** (the app expects parsed multipart fields).
-3. **Outbound (replies).** From address is `gapquote@parse.epicaiproducts.com` (`GAP_QUOTE_FROM_EMAIL`). Authenticate `parse.epicaiproducts.com` in SendGrid (DKIM CNAMEs on that subdomain). Add/update **SPF** on `parse.epicaiproducts.com` to include SendGrid (`include:sendgrid.net`). Keep apex SPF/DMARC for Workspace as they are. Without subdomain auth, replies land in spam or bounce.
+3. **Outbound (replies).** From address is `gapquote@epicaiproducts.com` (`GAP_QUOTE_FROM_EMAIL`) — the root domain, which is already a verified SendGrid Sender Identity. Do not send From `gapquote@parse.epicaiproducts.com`; this account does not inherit subdomain sender identities from root domain authentication. Inbound receiving stays on `gapquote@parse.epicaiproducts.com`. Apex SPF/DKIM/DMARC for Workspace + SendGrid on `epicaiproducts.com` cover outbound.
 4. Apply `supabase/migrations/20260814_gap_quote_runs.sql` in the Supabase SQL editor before the first inbound email.
 
 Vercel serverless request body limit is ~4.5MB — oversized census emails will fail the webhook.
@@ -510,7 +510,7 @@ npm run verify:supabase
 | Benchmarking | Removed (no reliable data source) | Add if Loomis provides benchmark data |
 | Streaming | Full response only | Switch to Vercel AI SDK streaming for better UX on large files |
 | Admin inbound run history | Not built | Add an admin list of `gap_quote_runs` |
-| GAP inbound DNS | Live: MX on `parse.epicaiproducts.com` only; apex stays Google Workspace | Keep `GAP_QUOTE_FROM_EMAIL=gapquote@parse.epicaiproducts.com` |
+| GAP inbound DNS | Live: MX on `parse.epicaiproducts.com` only; apex stays Google Workspace | Inbound: `gapquote@parse.epicaiproducts.com`. Outbound From: `gapquote@epicaiproducts.com` |
 
 ---
 
