@@ -62,7 +62,7 @@ export default function PromptsAdminPage() {
     <div>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-xl font-normal">Prompts</h1>
+          <h1 className="text-[15px] text-ink">Prompts</h1>
           <p className="text-sm text-muted-foreground mt-1">Manage AI prompts. Use {`{{variableName}}`} to insert page variables.</p>
         </div>
         {!showAdd && (
@@ -87,7 +87,7 @@ export default function PromptsAdminPage() {
                 <div className="flex flex-col gap-1.5">
                   <Label>Page</Label>
                   <select value={form.pageSlug} onChange={(e) => setForm({ ...form, pageSlug: e.target.value })} required
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm font-light focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+                    className="w-full rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none">
                     <option value="">Select a page...</option>
                     {pages.map((p) => <option key={p.slug} value={p.slug}>{p.name}</option>)}
                   </select>
@@ -140,7 +140,7 @@ export default function PromptsAdminPage() {
           const pageName = pages.find((p) => p.slug === prompt.pageSlug)?.name ?? prompt.pageSlug;
           return (
             <Link key={prompt.id} href={`/admin/prompts/${prompt.id}`}>
-              <Card className="hover:bg-accent/40 transition-colors duration-200 cursor-pointer h-full">
+              <Card className="h-full cursor-pointer hover:bg-soft">
                 <CardContent className="p-4">
                   <p className="text-sm font-normal mb-1.5">{prompt.name}</p>
                   <Badge variant="secondary" className="text-xs mb-2">{pageName}</Badge>

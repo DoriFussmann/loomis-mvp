@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { Check, FileSpreadsheet, Loader2, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,11 +21,18 @@ import {
 
 type Screen = "input" | "checks" | "tiers" | "results";
 
+export interface GapQuoteStoredRun {
+  id: string;
+  subject: string;
+  senderEmail: string;
+  result: AnalyzeGapQuoteResult;
+}
+
 const MIN_LOADER_MS = 2000;
 const STAGGER_MS = 420;
 const CUSTOM_NAME = "__custom__";
 const SELECT_CLASS =
-  "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm font-light focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
+  "rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none";
 
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -63,7 +71,7 @@ function confidenceLabel(confidence: NameConfidence, proposedName: string): stri
 
 function Preloader({ label }: { label: string }) {
   return (
-    <div className="rounded-md border border-border bg-muted/30 p-4">
+    <div className="rounded-xl border border-line bg-white px-4 py-3">
       <div className="flex items-center gap-3">
         <Loader2 className="w-4 h-4 animate-spin text-foreground" />
         <p className="text-sm text-foreground">{label}</p>
@@ -88,8 +96,8 @@ function CheckRow({ check, visible }: { check: GroupCheck; visible: boolean }) {
       <span
         className={`mt-0.5 flex h-5 w-5 items-center justify-center rounded-full border ${
           check.passed
-            ? "border-primary/30 bg-primary/10 text-primary"
-            : "border-destructive/30 bg-destructive/10 text-destructive"
+            ? "border-check bg-soft text-check"
+            : "border-line bg-soft text-accent"
         }`}
       >
         {check.passed ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
@@ -102,22 +110,25 @@ function CheckRow({ check, visible }: { check: GroupCheck; visible: boolean }) {
   );
 }
 
-export function GapQuoteClient() {
+export function GapQuoteClient({ storedRun }: { storedRun?: GapQuoteStoredRun }) {
+  const router = useRouter();
   const reducedMotion = useReducedMotion();
   const fileRef = useRef<HTMLInputElement>(null);
-  const [screen, setScreen] = useState<Screen>("input");
+  const [screen, setScreen] = useState<Screen>(storedRun ? "results" : "input");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<AnalyzeGapQuoteResult | null>(null);
+  const [result, setResult] = useState<AnalyzeGapQuoteResult | null>(storedRun?.result ?? null);
+  const [persistError, setPersistError] = useState("");
   const [revealedChecks, setRevealedChecks] = useState(0);
   const [revealedTiers, setRevealedTiers] = useState(0);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [reviewGroupId, setReviewGroupId] = useState<string | null>(null);
 
   const passing = result?.groups.filter((group) => group.passed) ?? [];
+  const excluded = result?.groups.filter((group) => !group.passed) ?? [];
   const reviewGroup = result?.groups.find((group) => group.id === reviewGroupId) ?? null;
 
   useEffect(() => {
@@ -153,27 +164,49 @@ export function GapQuoteClient() {
     return () => window.clearInterval(timer);
   }, [screen, loading, reducedMotion, passing.length]);
 
+  function applyGroupPatch(prev: AnalyzeGapQuoteResult, id: string, patch: Partial<AnalyzedGroup>): AnalyzeGapQuoteResult {
+    return {
+      ...prev,
+      groups: prev.groups.map((group) => {
+        if (group.id !== id) return group;
+        const next: AnalyzedGroup = { ...group, ...patch };
+        if (next.priced) {
+          next.priced = {
+            ...next.priced,
+            employerName: next.employerName,
+            nameConfirmed: next.nameConfirmed,
+            nameConfidence: next.nameConfidence,
+            proposedName: next.proposedName,
+          };
+        }
+        return next;
+      }),
+    };
+  }
+
+  async function persistRun(next: AnalyzeGapQuoteResult) {
+    if (!storedRun) return;
+    setPersistError("");
+    try {
+      const response = await fetch(`/api/gap-quote/runs/${storedRun.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ result: next }),
+      });
+      const json = await response.json();
+      if (!json.success) {
+        setPersistError(json.error ?? "Could not save changes.");
+      }
+    } catch (err) {
+      setPersistError(err instanceof Error ? err.message : "Could not save changes.");
+    }
+  }
+
   function patchGroup(id: string, patch: Partial<AnalyzedGroup>) {
-    setResult((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        groups: prev.groups.map((group) => {
-          if (group.id !== id) return group;
-          const next: AnalyzedGroup = { ...group, ...patch };
-          if (next.priced) {
-            next.priced = {
-              ...next.priced,
-              employerName: next.employerName,
-              nameConfirmed: next.nameConfirmed,
-              nameConfidence: next.nameConfidence,
-              proposedName: next.proposedName,
-            };
-          }
-          return next;
-        }),
-      };
-    });
+    if (!result) return;
+    const next = applyGroupPatch(result, id, patch);
+    setResult(next);
+    void persistRun(next);
   }
 
   function confirmEntityName(id: string, name: string) {
@@ -267,9 +300,14 @@ export function GapQuoteClient() {
   }
 
   function reset() {
+    if (storedRun) {
+      router.push("/gap-quote");
+      return;
+    }
     setScreen("input");
     setResult(null);
     setError("");
+    setPersistError("");
     setFiles([]);
     setSubject("");
     setBody("");
@@ -283,9 +321,16 @@ export function GapQuoteClient() {
 
   return (
     <div>
-      <h1 className="text-xl font-normal text-foreground">GAP Quote</h1>
+      <h1 className="text-[15px] text-ink">GAP Quote</h1>
       <p className="mt-2 text-sm text-muted-foreground mb-6">
-        Paste a broker email, attach one census per billing group, and generate a Loomis GAP proposal.
+        {storedRun
+          ? [
+              storedRun.subject ? `Request: ${storedRun.subject}` : "Inbound quote request",
+              storedRun.senderEmail ? `from ${storedRun.senderEmail}` : "",
+            ]
+              .filter(Boolean)
+              .join(" ")
+          : "Paste a broker email, attach one census per billing group, and generate a Loomis GAP proposal."}
       </p>
 
       {screen === "input" && (
@@ -431,6 +476,7 @@ export function GapQuoteClient() {
       {screen === "results" && (
         <div className="space-y-4">
           {error && <p className="text-sm text-destructive">{error}</p>}
+          {persistError && <p className="text-sm text-destructive">{persistError}</p>}
           {passing.map((group) => (
             <ResultCard
               key={group.id}
@@ -441,6 +487,32 @@ export function GapQuoteClient() {
               onDownload={() => group.priced && downloadPdf(group.priced, group.fileName)}
             />
           ))}
+          {storedRun && excluded.length > 0 && (
+            <div className="space-y-4">
+              <h2 className="text-sm font-normal text-foreground pt-2">Excluded groups</h2>
+              {excluded.map((group) => (
+                <Card key={group.id}>
+                  <CardHeader className="pb-3">
+                    <GroupHeading
+                      group={group}
+                      badge={<Badge variant="secondary">Excluded</Badge>}
+                    />
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {group.checks.map((check) => (
+                      <CheckRow key={check.id} check={check} visible />
+                    ))}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+          {passing.length === 0 && excluded.length === 0 && (
+            <p className="text-sm text-muted-foreground">No groups in this quote run.</p>
+          )}
+          {passing.length === 0 && excluded.length > 0 && !storedRun && (
+            <p className="text-sm text-muted-foreground">No groups passed. Adjust the request or rate table and try again.</p>
+          )}
           <Button variant="outline" onClick={reset}>
             New Quote
           </Button>
@@ -650,10 +722,10 @@ function ProposalModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-foreground/20 p-6">
-      <div className="w-full max-w-4xl rounded-lg border border-border bg-card shadow-sm my-8">
-        <div className="flex items-center justify-between border-b border-border px-6 py-4">
+      <div className="my-8 w-full max-w-4xl rounded-xl border border-line bg-white">
+        <div className="flex items-center justify-between border-b border-line px-4 py-3">
           <div>
-            <h2 className="text-base font-normal">See Proposal</h2>
+            <h2 className="text-ink">See Proposal</h2>
             <p className="text-xs text-muted-foreground mt-1">{group.fileName}</p>
           </div>
           <Button variant="ghost" size="sm" onClick={onClose}>

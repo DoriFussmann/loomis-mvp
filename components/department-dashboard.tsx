@@ -110,36 +110,30 @@ function DepartmentDashboardInner({
   }
 
   return (
-    <div className="flex -mx-6 -mt-8">
-      {/* Left sidebar */}
+    <div className="-mx-8 -my-6 flex min-h-0 flex-1">
       <aside
-        className="flex-shrink-0 border-r border-border flex flex-col bg-background transition-[width] duration-200"
-        style={{ width: collapsed ? "52px" : "18%" }}
+        className="flex flex-shrink-0 flex-col border-r border-line bg-white p-3 transition-[width] duration-200"
+        style={{ width: collapsed ? "52px" : "208px" }}
       >
-        {/* Collapse toggle */}
-        <div className="px-2 pt-6 pb-2 flex" style={{ justifyContent: collapsed ? "center" : "flex-end" }}>
+        <div className="mb-3 flex" style={{ justifyContent: collapsed ? "center" : "flex-end" }}>
           <button
             onClick={() => setCollapsed((c) => !c)}
-            className="w-5 h-5 flex items-center justify-center rounded border border-border bg-background text-muted-foreground shadow-sm"
+            className="flex h-5 w-5 items-center justify-center rounded-lg border border-line bg-white text-muted-foreground hover:text-ink"
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             {collapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
           </button>
         </div>
 
-        {/* Nav items */}
         <nav
-          className="flex-1 pb-4 flex flex-col"
-          style={{ gap: "0.4rem", padding: collapsed ? "0 0 1rem" : "0 0.5rem 1rem", alignItems: collapsed ? "center" : "stretch" }}
+          className="flex flex-1 flex-col gap-3"
+          style={{ alignItems: collapsed ? "center" : "stretch" }}
         >
           {navItems.filter((item) => (showNavTools ? true : item.active || item.heading)).map((item) => {
             if (item.heading) {
               if (collapsed) return <div key={item.label} className="h-2" />;
               return (
-                <p
-                  key={item.label}
-                  className="text-[10px] font-medium text-foreground/40 px-3 pt-3 pb-1"
-                >
+                <p key={item.label} className="px-3 pt-1 text-muted-foreground">
                   {item.label}
                 </p>
               );
@@ -155,43 +149,40 @@ function DepartmentDashboardInner({
               <div
                 title={item.label}
                 className={[
-                  "w-5 h-5 flex items-center justify-center rounded border transition-colors duration-150",
+                  "flex h-8 w-8 items-center justify-center rounded-lg border border-line",
                   isActive
-                    ? "bg-foreground/10 text-foreground border-foreground/30"
-                    : "border-border text-foreground hover:bg-muted hover:border-foreground/40",
+                    ? "bg-soft text-ink"
+                    : "text-muted-foreground hover:bg-soft hover:text-ink",
                 ].join(" ")}
                 style={{
                   cursor: isLive ? "pointer" : "default",
                   opacity: !isActive && !isLive ? 0.4 : 1,
                 }}
               >
-                {Icon && <Icon size={10} />}
+                {Icon && <Icon size={14} />}
               </div>
             ) : (
               <div
                 className={[
-                  "flex items-center gap-2 rounded-md border transition-colors duration-150",
+                  "flex w-full items-center gap-2 rounded-lg border border-line px-3 py-2 text-left",
                   isActive
-                    ? "bg-foreground/10 text-foreground border-foreground/30"
-                    : "border-border text-foreground hover:bg-muted hover:border-foreground/40",
+                    ? "bg-soft text-ink"
+                    : "text-muted-foreground hover:bg-soft hover:text-ink",
                 ].join(" ")}
                 style={{
-                  padding: "0.45rem 0.75rem",
                   cursor: isLive ? "pointer" : "default",
                   opacity: !isActive && !isLive ? 0.4 : 1,
                 }}
               >
-                {Icon && <Icon size={11} className="flex-shrink-0 opacity-60" />}
-                <span className={["text-xs whitespace-nowrap", isActive ? "font-medium" : "font-light"].join(" ")}>
-                  {item.label}
-                </span>
+                {Icon && <Icon size={14} className="flex-shrink-0" />}
+                <span className="whitespace-nowrap">{item.label}</span>
               </div>
             );
 
             return isLive ? (
               <button
                 key={item.label}
-                className="text-left bg-transparent border-0 p-0"
+                className="w-full bg-transparent p-0 text-left"
                 onClick={() => navigateTo(item.slug, isDashboard)}
               >
                 {inner}
@@ -201,22 +192,17 @@ function DepartmentDashboardInner({
             );
           })}
         </nav>
-
       </aside>
 
-      {/* Main content area */}
-      <div className="flex-1 flex overflow-hidden">
-        <main className="flex-1 min-w-0 p-6 overflow-y-auto">
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        <main className="scroll-thin min-w-0 flex-1 overflow-y-auto px-8 py-6">
           {activeTool === "employer-application" && <EmployerApplicationClient />}
           {activeTool === "claims-validation" && <ClaimsValidationClient />}
           {activeTool === "gap-quote" && <GapQuoteClient />}
 
           {!activeTool && (
             <>
-              <p className="text-[10px] font-medium uppercase tracking-widest text-foreground/40 mb-1.5">
-                platform
-              </p>
-              <h2 className="text-lg font-light text-foreground mb-6">Explore the Tools</h2>
+              <h2 className="mb-6 text-[15px] text-ink">Explore the Tools</h2>
 
               {showTools && (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem", width: "100%" }}>
@@ -226,26 +212,22 @@ function DepartmentDashboardInner({
                       ((card.live && !!card.slug && accessiblePages.some((p) => p.slug === card.slug)) || card.forceLive === true);
                     const inner = (
                       <div
-                        className="border border-border rounded-lg p-4 bg-background transition-colors duration-150"
+                        className="rounded-xl border border-line bg-white px-4 py-3 hover:bg-soft"
                         style={{
                           cursor: isLive ? "pointer" : "default",
                           opacity: card.live && !isLive ? 0.5 : 1,
-                        width: "100%",
-                        height: "100%",
-                        boxSizing: "border-box",
+                          width: "100%",
+                          height: "100%",
+                          boxSizing: "border-box",
                         }}
                       >
-                        <div className="flex items-center justify-between mb-1.5">
-                          <p className="text-sm font-medium text-foreground">{card.label}</p>
+                        <div className="flex items-center justify-between">
+                          <p className="text-ink">{card.label}</p>
                           {!card.live && !card.forceLive && (
-                            <span className="text-[0.6rem] font-medium px-1.5 py-0.5 rounded bg-muted text-muted-foreground tracking-wide uppercase">
-                              soon
-                            </span>
+                            <span className="text-muted-foreground">soon</span>
                           )}
                           {isLive && (
-                            <span className="text-[0.6rem] font-medium px-1.5 py-0.5 rounded bg-primary text-primary-foreground tracking-wide uppercase">
-                              live
-                            </span>
+                            <span className="text-accent">live</span>
                           )}
                         </div>
                       </div>
@@ -269,16 +251,14 @@ function DepartmentDashboardInner({
           )}
         </main>
 
-        {/* Needs attention panel */}
         <aside
-          className="flex-shrink-0 border-l border-border flex flex-col bg-background transition-[width] duration-200"
+          className="flex flex-shrink-0 flex-col border-l border-line bg-white transition-[width] duration-200"
           style={{ width: attentionCollapsed ? "36px" : "30%" }}
         >
-          {/* Collapse toggle */}
-          <div className="px-2 pt-6 pb-2 flex justify-end">
+          <div className="flex justify-end p-3">
             <button
               onClick={() => setAttentionCollapsed((c) => !c)}
-              className="w-5 h-5 flex items-center justify-center rounded border border-border bg-background text-muted-foreground shadow-sm flex-shrink-0"
+              className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-lg border border-line bg-white text-muted-foreground hover:text-ink"
               aria-label={attentionCollapsed ? "Expand panel" : "Collapse panel"}
             >
               {attentionCollapsed ? <ChevronLeft size={12} /> : <ChevronRight size={12} />}
@@ -286,42 +266,37 @@ function DepartmentDashboardInner({
           </div>
 
           {!attentionCollapsed && (
-            <div className="px-8 pb-8 overflow-y-auto flex-1">
-              <p className="text-sm font-medium text-foreground mb-5">Needs Attention</p>
-              <p className="text-[10px] font-medium uppercase tracking-widest text-foreground/40 mb-3">
-                checklist
-              </p>
+            <div className="scroll-thin flex-1 overflow-y-auto px-4 pb-6">
+              <p className="mb-4 text-ink">Needs Attention</p>
 
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-3">
                 {ATTENTION_ITEMS.map((item, i) => {
                   const dotColor = item.done
-                    ? "hsl(var(--muted-foreground))"
-                    : item.status === "alert"
-                      ? "rgb(220, 60, 40)"
-                      : item.status === "warning"
-                        ? "rgb(200, 130, 20)"
-                        : "hsl(var(--primary))";
+                    ? "#6a9a78"
+                    : item.status === "alert" || item.status === "action"
+                      ? "#2f5eff"
+                      : "#8a8a8a";
 
                   return (
                     <div
                       key={i}
-                      className="flex items-center gap-2.5 px-2.5 py-2 rounded-md"
+                      className="flex items-center gap-2.5 rounded-lg border px-3 py-2"
                       style={{
-                        border: `1px solid ${item.done ? "transparent" : "hsl(var(--border))"}`,
+                        borderColor: item.done ? "transparent" : "#e6e6e6",
                         opacity: item.done ? 0.45 : 1,
                       }}
                     >
                       <div
-                        className="w-3.5 h-3.5 rounded-full flex-shrink-0 flex items-center justify-center"
+                        className="flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center rounded-full"
                         style={{
-                          border: `2px solid ${dotColor}`,
+                          border: `1px solid ${dotColor}`,
                           background: item.done ? dotColor : "transparent",
                         }}
                       >
-                        {item.done && <span className="text-background text-[0.5rem]">✓</span>}
+                        {item.done && <span className="text-[0.5rem] text-white">✓</span>}
                       </div>
                       <p
-                        className="text-xs text-foreground truncate min-w-0"
+                        className="min-w-0 truncate text-ink"
                         style={{ textDecoration: item.done ? "line-through" : "none" }}
                       >
                         {item.label}

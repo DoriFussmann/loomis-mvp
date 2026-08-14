@@ -215,7 +215,7 @@ function lineLabel(line: string) {
 function StatCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div className="bg-muted border border-border rounded-lg p-4">
-      <p className="text-[0.65rem] uppercase tracking-widest text-muted-foreground mb-1">{label}</p>
+      <p className="mb-1 text-muted-foreground">{label}</p>
       <p className="text-2xl text-foreground leading-tight">{value}</p>
       {sub && <p className="text-xs text-muted-foreground mt-1">{sub}</p>}
     </div>
@@ -225,7 +225,7 @@ function StatCard({ label, value, sub }: { label: string; value: string; sub?: s
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="mb-8">
-      <h3 className="text-[0.65rem] uppercase tracking-widest text-muted-foreground border-b border-border pb-2 mb-4">
+      <h3 className="mb-4 border-b border-line pb-2 text-muted-foreground">
         {title}
       </h3>
       {children}
@@ -262,7 +262,7 @@ function Table({ headers, rows }: { headers: string[]; rows: (string | React.Rea
             {headers.map((h) => (
               <th
                 key={h}
-                className="text-left px-3 py-2 text-[0.7rem] uppercase tracking-wide text-muted-foreground border-b-2 border-border whitespace-nowrap"
+                className="whitespace-nowrap border-b border-line px-3 py-2 text-left text-muted-foreground"
               >
                 {h}
               </th>
@@ -287,10 +287,10 @@ function Table({ headers, rows }: { headers: string[]; rows: (string | React.Rea
 
 function Badge({ text, variant = 'default' }: { text: string; variant?: 'default' | 'open' | 'closed' | 'line' }) {
   const cls: Record<string, string> = {
-    default: 'bg-muted text-muted-foreground',
-    open:    'bg-orange-50 text-orange-700',
-    closed:  'bg-green-50 text-green-700',
-    line:    'bg-primary text-primary-foreground',
+    default: 'bg-soft text-muted-foreground',
+    open:    'border border-line text-accent',
+    closed:  'border border-line text-check',
+    line:    'border border-line text-ink',
   }
   return (
     <span className={`inline-block text-[0.7rem] px-2 py-0.5 rounded-full ${cls[variant]}`}>
@@ -313,21 +313,20 @@ function ReportView({ result }: { result: AnalysisResult }) {
   return (
     <div>
       {/* Header banner */}
-      <div className="bg-primary text-primary-foreground rounded-xl p-6 mb-8 flex justify-between items-start gap-4">
+      <div className="mb-8 flex items-start justify-between gap-4 rounded-xl border border-line bg-white px-4 py-3">
         <div>
-          <p className="text-[0.65rem] uppercase tracking-widest opacity-70 mb-1">Loss Run Analysis</p>
-          <h2 className="text-2xl font-normal m-0">{report.insured_name ?? 'Unknown Insured'}</h2>
-          <p className="text-sm opacity-80 mt-1">{report.carrier}</p>
+          <p className="mb-1 text-muted-foreground">Loss Run Analysis</p>
+          <h2 className="m-0 text-[15px] text-ink">{report.insured_name ?? 'Unknown Insured'}</h2>
+          <p className="mt-1 text-muted-foreground">{report.carrier}</p>
         </div>
-        <div className="text-right flex-shrink-0">
-          <p className="text-[0.65rem] opacity-70 mb-1">Valued as of</p>
-          <p className="text-base">{report.valued_as_of ?? '—'}</p>
-          <div className="flex gap-1.5 mt-2 justify-end flex-wrap">
+        <div className="flex-shrink-0 text-right">
+          <p className="mb-1 text-muted-foreground">Valued as of</p>
+          <p className="text-ink">{report.valued_as_of ?? '—'}</p>
+          <div className="mt-2 flex flex-wrap justify-end gap-1.5">
             {report.coverage_lines.map((l) => (
               <span
                 key={l}
-                className="text-[0.65rem] px-2 py-0.5 rounded-full tracking-wide"
-                style={{ background: 'rgba(255,255,255,0.18)' }}
+                className="rounded-lg border border-line px-2 py-0.5 text-muted-foreground"
               >
                 {lineBadge(l)}
               </span>
@@ -413,7 +412,7 @@ function ReportView({ result }: { result: AnalysisResult }) {
 
           {report.wc_detail.financials && (
             <div className="mb-6">
-              <p className="text-[0.7rem] font-bold uppercase tracking-widest text-muted-foreground mb-3">Financials</p>
+              <p className="mb-3 text-muted-foreground">Financials</p>
               <Table
                 headers={['Type', 'Paid', 'Reserve', 'Total']}
                 rows={[
@@ -428,7 +427,7 @@ function ReportView({ result }: { result: AnalysisResult }) {
           <div className="grid grid-cols-2 gap-3 mb-6">
             {report.wc_detail.claim_type_split && (
               <div className="border border-border rounded-lg p-4">
-                <p className="text-[0.7rem] font-bold uppercase tracking-widest text-muted-foreground mb-2">Claim Types</p>
+              <p className="mb-2 text-muted-foreground">Claim Types</p>
                 {[
                   ['Indemnity', report.wc_detail.claim_type_split.indemnity_count],
                   ['Medical Only', report.wc_detail.claim_type_split.medical_only_count],
@@ -443,7 +442,7 @@ function ReportView({ result }: { result: AnalysisResult }) {
             )}
             {report.wc_detail.litigated_claims && (
               <div className="border border-border rounded-lg p-4">
-                <p className="text-[0.7rem] font-bold uppercase tracking-widest text-muted-foreground mb-2">Litigated Claims</p>
+              <p className="mb-2 text-muted-foreground">Litigated Claims</p>
                 <div className="flex justify-between text-sm py-1 border-b border-border">
                   <span className="text-muted-foreground">Count</span>
                   <span className="font-semibold text-foreground">{report.wc_detail.litigated_claims.count ?? '—'}</span>
@@ -458,7 +457,7 @@ function ReportView({ result }: { result: AnalysisResult }) {
 
           {report.wc_detail.reporting_lag && (
             <div className="mb-6">
-              <p className="text-[0.7rem] font-bold uppercase tracking-widest text-muted-foreground mb-3">Reporting Lag</p>
+              <p className="mb-3 text-muted-foreground">Reporting Lag</p>
               <div className="grid grid-cols-3 gap-2 mb-2">
                 {[
                   ['0–3 Days', report.wc_detail.reporting_lag.within_3_days],
@@ -484,7 +483,7 @@ function ReportView({ result }: { result: AnalysisResult }) {
 
           {report.wc_detail.injury_breakdown?.length > 0 && (
             <div className="mb-6">
-              <p className="text-[0.7rem] font-bold uppercase tracking-widest text-muted-foreground mb-3">Cause of Injury</p>
+              <p className="mb-3 text-muted-foreground">Cause of Injury</p>
               <Table
                 headers={['Cause', 'Body Parts', 'Claims', 'Total Incurred', 'Avg Cost']}
                 rows={report.wc_detail.injury_breakdown.map((row) => [
@@ -500,7 +499,7 @@ function ReportView({ result }: { result: AnalysisResult }) {
 
           {report.wc_detail.top_body_parts?.length > 0 && (
             <div className="mb-6">
-              <p className="text-[0.7rem] font-bold uppercase tracking-widest text-muted-foreground mb-3">Top Body Parts</p>
+              <p className="mb-3 text-muted-foreground">Top Body Parts</p>
               <Table
                 headers={['Body Part', 'Claims', 'Total Incurred']}
                 rows={report.wc_detail.top_body_parts.map((row) => [
@@ -514,7 +513,7 @@ function ReportView({ result }: { result: AnalysisResult }) {
 
           {report.wc_detail.by_age_at_injury?.length > 0 && (
             <div className="mb-6">
-              <p className="text-[0.7rem] font-bold uppercase tracking-widest text-muted-foreground mb-3">By Age at Injury</p>
+              <p className="mb-3 text-muted-foreground">By Age at Injury</p>
               <Table
                 headers={['Age Bracket', 'Claims', 'Total Incurred']}
                 rows={report.wc_detail.by_age_at_injury.map((row) => [
@@ -526,7 +525,7 @@ function ReportView({ result }: { result: AnalysisResult }) {
 
           {report.wc_detail.by_month?.length > 0 && (
             <div className="mb-6">
-              <p className="text-[0.7rem] font-bold uppercase tracking-widest text-muted-foreground mb-3">By Month</p>
+              <p className="mb-3 text-muted-foreground">By Month</p>
               <Table
                 headers={['Month', 'Claims', 'Total Incurred']}
                 rows={report.wc_detail.by_month.map((row) => [
@@ -538,7 +537,7 @@ function ReportView({ result }: { result: AnalysisResult }) {
 
           {report.wc_detail.by_day_of_week?.length > 0 && (
             <div className="mb-6">
-              <p className="text-[0.7rem] font-bold uppercase tracking-widest text-muted-foreground mb-3">By Day of Week</p>
+              <p className="mb-3 text-muted-foreground">By Day of Week</p>
               <Table
                 headers={['Day', 'Claims', 'Total Incurred']}
                 rows={report.wc_detail.by_day_of_week.map((row) => [
@@ -550,7 +549,7 @@ function ReportView({ result }: { result: AnalysisResult }) {
 
           {report.wc_detail.by_department?.length > 0 && (
             <div className="mb-6">
-              <p className="text-[0.7rem] font-bold uppercase tracking-widest text-muted-foreground mb-3">By Department</p>
+              <p className="mb-3 text-muted-foreground">By Department</p>
               <Table
                 headers={['Department', 'Claims', 'Total Incurred']}
                 rows={report.wc_detail.by_department.map((row) => [
@@ -562,7 +561,7 @@ function ReportView({ result }: { result: AnalysisResult }) {
 
           {report.wc_detail.by_state?.length > 0 && (
             <div className="mb-6">
-              <p className="text-[0.7rem] font-bold uppercase tracking-widest text-muted-foreground mb-3">By State</p>
+              <p className="mb-3 text-muted-foreground">By State</p>
               <Table
                 headers={['State', 'Claims', 'Total Incurred']}
                 rows={report.wc_detail.by_state.map((row) => [
@@ -574,7 +573,7 @@ function ReportView({ result }: { result: AnalysisResult }) {
 
           {report.wc_detail.repeat_claimants?.length > 0 && (
             <div className="mb-6">
-              <p className="text-[0.7rem] font-bold uppercase tracking-widest text-muted-foreground mb-3">Repeat Claimants</p>
+              <p className="mb-3 text-muted-foreground">Repeat Claimants</p>
               <Table
                 headers={['Claimant', 'Claims', 'Total Incurred']}
                 rows={report.wc_detail.repeat_claimants.map((row) => [
@@ -588,7 +587,7 @@ function ReportView({ result }: { result: AnalysisResult }) {
 
           {report.wc_detail.open_vs_closed && (
             <div className="mb-6">
-              <p className="text-[0.7rem] font-bold uppercase tracking-widest text-muted-foreground mb-3">Open vs Closed</p>
+              <p className="mb-3 text-muted-foreground">Open vs Closed</p>
               <Table
                 headers={['Status', 'Count', 'Total Incurred']}
                 rows={[
@@ -601,7 +600,7 @@ function ReportView({ result }: { result: AnalysisResult }) {
 
           {report.wc_detail.large_claims?.length > 0 && (
             <div className="mb-6">
-              <p className="text-[0.7rem] font-bold uppercase tracking-widest text-muted-foreground mb-3">Large Claims</p>
+              <p className="mb-3 text-muted-foreground">Large Claims</p>
               <Table
                 headers={['Claimant', 'Date', 'Cause', 'Body Part', 'Type', 'Total Incurred', 'Status']}
                 rows={report.wc_detail.large_claims.map((c) => [
@@ -661,7 +660,7 @@ function ReportView({ result }: { result: AnalysisResult }) {
           <div className="flex flex-col gap-2.5">
             {report.observations.map((obs, i) => (
               <div key={i} className="flex gap-3 bg-muted rounded-lg px-4 py-3 border border-border">
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground text-[0.65rem] flex items-center justify-center">
+                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border border-line text-muted-foreground">
                   {i + 1}
                 </span>
                 <p className="text-sm text-foreground leading-relaxed m-0">{obs}</p>
@@ -761,7 +760,7 @@ export default function LossRunAnalyzerPage() {
     <div>
       {/* Title */}
       <div className="mb-6">
-        <h1 className="text-xl font-normal text-foreground">Loss Run Analyzer</h1>
+        <h1 className="text-[15px] text-ink">Loss Run Analyzer</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Upload a loss run PDF to extract structured claims data and generate a client-ready report.
         </p>
@@ -781,7 +780,7 @@ export default function LossRunAnalyzerPage() {
                 value={clientName}
                 onChange={(e) => setClientName(e.target.value)}
                 placeholder="e.g. Jane Smith"
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm font-light focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-colors"
+                className="w-full rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none placeholder:text-placeholder"
               />
             </div>
             <div>
@@ -793,7 +792,7 @@ export default function LossRunAnalyzerPage() {
                 value={clientCompany}
                 onChange={(e) => setClientCompany(e.target.value)}
                 placeholder="e.g. Just Ducky Farms"
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm font-light focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-colors"
+                className="w-full rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none placeholder:text-placeholder"
               />
             </div>
           </div>
@@ -847,8 +846,8 @@ export default function LossRunAnalyzerPage() {
       {result && !showReport && (
         <div className="mt-6 flex flex-col gap-4">
           {/* Classifier card */}
-          <div className="border border-border rounded-lg p-5 bg-muted">
-            <p className="text-[0.65rem] uppercase tracking-widest text-muted-foreground mb-3">
+          <div className="rounded-xl border border-line bg-white px-4 py-3">
+            <p className="mb-3 text-muted-foreground">
               Document Classified
             </p>
             <div className="grid text-sm gap-y-1.5 gap-x-8" style={{ gridTemplateColumns: '1fr 1fr' }}>
@@ -878,7 +877,7 @@ export default function LossRunAnalyzerPage() {
           <div className="border border-border rounded-lg overflow-hidden">
             <button
               onClick={() => setRawExpanded(!rawExpanded)}
-              className="w-full flex items-center justify-between px-4 py-3 bg-muted text-sm text-muted-foreground hover:bg-accent transition-colors duration-200"
+              className="flex w-full items-center justify-between bg-soft px-4 py-3 text-muted-foreground hover:bg-white hover:text-ink"
             >
               <span className="font-medium">Raw JSON Output</span>
               <span className="text-xs">{rawExpanded ? '▲ Collapse' : '▼ Expand'}</span>

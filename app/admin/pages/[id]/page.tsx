@@ -160,7 +160,7 @@ export default function PageDetailPage({ params }: { params: { id: string } }) {
         <ArrowLeft className="w-4 h-4" /> Pages & Prompts
       </Link>
 
-      <h1 className="text-xl font-normal mb-1">{page.name}</h1>
+      <h1 className="mb-1 text-[15px] text-ink">{page.name}</h1>
       <p className="text-sm text-muted-foreground font-mono mb-8">/{page.slug}</p>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">

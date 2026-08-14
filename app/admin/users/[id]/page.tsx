@@ -86,7 +86,7 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
         <ArrowLeft className="w-4 h-4" /> Users
       </Link>
 
-      <h1 className="text-xl font-normal mb-1">{user.name}</h1>
+      <h1 className="mb-1 text-[15px] text-ink">{user.name}</h1>
       <p className="text-sm text-muted-foreground mb-8">{user.email}</p>
 
       <form onSubmit={handleSave} className="flex flex-col gap-6">
@@ -104,7 +104,7 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
             <div className="flex flex-col gap-1.5">
               <Label>Role</Label>
               <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm font-light focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+                className="w-full rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none">
                 <option value="user">User</option>
                 <option value="admin">Admin</option>
               </select>
@@ -123,10 +123,10 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
                       key={department}
                       type="button"
                       onClick={() => toggleDepartment(department)}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-light border transition-colors duration-200 ${
+                      className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 ${
                         selected
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "border-border text-muted-foreground hover:border-primary/50"
+                          ? "border-line bg-soft text-ink"
+                          : "border-line text-muted-foreground hover:bg-soft hover:text-ink"
                       }`}
                     >
                       {department}
@@ -150,7 +150,7 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
                     const has = allowedPages.includes(page.slug);
                     return (
                       <button key={page.slug} type="button" onClick={() => togglePage(page.slug)}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-light border transition-colors duration-200 ${has ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:border-primary/50"}`}>
+                        className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 ${has ? "border-line bg-soft text-ink" : "border-line text-muted-foreground hover:bg-soft hover:text-ink"}`}>
                         {has && <Check className="w-3.5 h-3.5" />}{page.name}
                       </button>
                     );

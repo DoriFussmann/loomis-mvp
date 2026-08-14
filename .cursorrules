@@ -31,44 +31,57 @@ Do not skip this. HANDOFF.md is the source of truth for any engineer picking thi
 ## Design System
 
 ### Typography
-- Font: Inter (Google Fonts), weights 300/400/500
-- Default body weight: 300
-- Fallback: sans-serif
+- Font: Inter (`var(--font-inter)`), fallbacks `system-ui`, `sans-serif`
+- Loaded weight: `400` only
+- Global: `font-weight: 400 !important` on `*` — no bold. `letter-spacing: -0.01em`. Antialiased.
+- Base size: `13px` on `body` (`text-[13px]`)
+- Page title: `text-[15px] text-ink`
+- Card title / body: `13px` / `400` / ink
+- Muted metadata: `text-muted-foreground` (`#8a8a8a`)
 
-### Color Tokens (use CSS variables, never hardcode colors)
-All colors via hsl(var(--token)) pattern.
-Light mode on :root, dark mode on .dark class.
+### Color Tokens
+Named hex tokens in `tailwind.config.ts` plus CSS variables in `globals.css`.
 
-Key tokens: --background, --foreground, --card, --primary, --secondary,
---muted, --accent, --destructive, --border, --input, --ring, --sidebar-*
+| Token | Hex | Role |
+|---|---|---|
+| `blueprint` | `#2c4a6e` | Login left panel |
+| `white` | `#ffffff` | Body + card surfaces |
+| `line` | `#e6e6e6` | Borders, dividers |
+| `ink` | `#1a1a1a` | Primary text |
+| `muted` / `--muted-foreground` | `#8a8a8a` | Secondary text |
+| `soft` | `#fafafa` | Soft fills, hover, active nav |
+| `accent` / `--primary` | `#2f5eff` | Status complete, links, errors |
+| `check` | `#6a9a78` | Confirmed checkmarks |
+| `placeholder` | `#b5b5b5` | Input placeholders |
+| `scrollbar` | `#e0e0e0` | Thin scrollbar thumb |
+
+Login panel copy: `text-white/50` (eyebrow), `text-white/70` (subcopy), `text-white/40` (footer).
 
 ### Border Radius
-- --radius: 0.625rem
-- lg: var(--radius), md: calc(var(--radius) - 3px), sm: calc(var(--radius) - 5px)
+- `lg`: `0.375rem` (6px) — nav items, inputs, buttons
+- `xl`: `0.5rem` (8px) — cards
+- `2xl`: `0.75rem` (12px)
 
 ### Layout Rules
-- Max content width: 1280px (max-w-[1280px]) on ALL pages and layouts
-- This applies to page content AND navigation/header elements
-- Always center constrained content with mx-auto
-- Full-bleed backgrounds are fine; only the inner content wrapper is capped
-- Global navigation header is provided by `components/site-header.tsx` (user pages) and `app/admin/layout.tsx` (admin pages)
-- User-facing pages live in `app/(app)/` route group — they inherit `SiteHeader` + `max-w-[1280px] mx-auto px-6 py-8` automatically
+- Max content width: 1280px (`max-w-[1280px]`) on ALL pages and layouts
+- Always center constrained content with `mx-auto`
+- Global navigation: `h-12`, `border-b border-line` — `components/site-header.tsx` (user) and `app/admin/layout.tsx` (admin)
+- User-facing pages live in `app/(app)/` — they inherit `SiteHeader` + `px-8 py-6`
 - Never add per-page outer wrappers or padding when inside the `(app)/` route group
-- Consistent spacing: `py-8` page top/bottom, `px-6` horizontal, `gap-6` between cards, `mb-6` below headings
+- Content column padding: `px-8 py-6`
+- Left nav: `w-52`, `border-r`, `p-3`, `gap-3` bordered items
+- Login: 50/50 split; card `max-w-[420px] rounded-xl border-line p-6`
 
 ### Aesthetic Rules
-- Warm, airy palette: near-white backgrounds, soft warm foreground (not near-black), delicate borders
-- Cards use pure white (#fff) for crisp contrast against the warm background
-- Primary color is warm stone (28 18% 30%), not near-black — buttons should feel light, not heavy
-- Foreground text at 22% lightness — readable but gentle, never coal-black
-- Subtle shadows only (shadow-sm), never deep/harsh
-- Thin borders using --border on all containers and inputs
-- Hover: subtle background shift
-- Focus: focus-visible:ring-1 focus-visible:ring-ring
-- Transitions: 0.2s ease-out on interactive elements
-- Icons: Lucide React, w-4 h-4 standard, w-3.5 h-3.5 compact
-- Spacing: px-4 py-2, gap-2 as base units
-- Never hardcode raw RGB/hex values; always use hsl(var(--token)) tokens
+- White surfaces, 1px `#e6e6e6` borders, **no shadows**
+- Ghost outlined buttons: `rounded-lg border border-line px-3 py-2 text-muted-foreground hover:text-ink disabled:opacity-40` — no filled primary
+- Cards: `bg-white border-line rounded-xl`, header/body `px-4 py-3`, hover `bg-soft`
+- Nav item default: `border-line text-muted-foreground hover:bg-soft hover:text-ink`
+- Nav item active: `border-line bg-soft text-ink`
+- Inputs: `rounded-lg border border-line px-3 py-2`, outline none, placeholder `#b5b5b5`
+- Voice: minimal labels. Placeholders and button text only where possible.
+- Icons: Lucide React, `w-4 h-4` standard
+- Keep the Loomis logo on login (blueprint panel + mobile) and in the site/admin headers
 
 ---
 

@@ -1,8 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createMiddlewareSupabaseClient } from "@/lib/supabase/middleware";
 
+function redirectToLogin(request: NextRequest): NextResponse {
+  const login = new URL("/login", request.url);
+  const next = `${request.nextUrl.pathname}${request.nextUrl.search}`;
+  if (next && next !== "/login") {
+    login.searchParams.set("next", next);
+  }
+  return NextResponse.redirect(login);
+}
+
+function isGapQuotePage(pathname: string): boolean {
+  return pathname === "/gap-quote" || pathname.startsWith("/gap-quote/");
+}
+
+function isGapQuoteInboundWebhook(pathname: string): boolean {
+  return pathname === "/api/gap-quote/inbound" || pathname.startsWith("/api/gap-quote/inbound/");
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // SendGrid webhook: authenticated by GAP_QUOTE_INBOUND_WEBHOOK_SECRET in the route, not a session.
+  if (isGapQuoteInboundWebhook(pathname)) {
+    return NextResponse.next({ request });
+  }
+
   const response = NextResponse.next({ request });
   const supabase = createMiddlewareSupabaseClient(request, response);
 
@@ -23,7 +46,7 @@ export async function middleware(request: NextRequest) {
   // Admin routes — require admin role
   if (pathname.startsWith("/admin")) {
     if (!user || role !== "admin") {
-      return NextResponse.redirect(new URL("/login", request.url));
+      return redirectToLogin(request);
     }
     return response;
   }
@@ -59,23 +82,23 @@ export async function middleware(request: NextRequest) {
     pathname === "/benefits" ||
     pathname === "/employer-application" ||
     pathname === "/claims-validation" ||
-    pathname === "/gap-quote"
+    isGapQuotePage(pathname)
   ) {
     if (!user) {
-      return NextResponse.redirect(new URL("/login", request.url));
+      return redirectToLogin(request);
     }
     if (role === "admin") return response;
     if (pathname === "/pnc" && !departments.includes("P&C")) {
-      return NextResponse.redirect(new URL("/login", request.url));
+      return redirectToLogin(request);
     }
     if (
       (pathname === "/benefits" ||
         pathname === "/employer-application" ||
         pathname === "/claims-validation" ||
-        pathname === "/gap-quote") &&
+        isGapQuotePage(pathname)) &&
       !departments.includes("Benefits")
     ) {
-      return NextResponse.redirect(new URL("/login", request.url));
+      return redirectToLogin(request);
     }
     return response;
   }
@@ -84,14 +107,14 @@ export async function middleware(request: NextRequest) {
   const protectedPages = ["/test", "/loss-run-analyzer"];
   if (protectedPages.includes(pathname)) {
     if (!user) {
-      return NextResponse.redirect(new URL("/login", request.url));
+      return redirectToLogin(request);
     }
     // Admin can access everything
     if (role === "admin") return response;
     // Users need page in their allowedPages
     const slug = pathname.replace("/", "");
     if (!allowedPages.includes(slug)) {
-      return NextResponse.redirect(new URL("/login", request.url));
+      return redirectToLogin(request);
     }
   }
 
@@ -110,8 +133,9 @@ export const config = {
     "/employer-application",
     "/claims-validation",
     "/gap-quote",
+    "/gap-quote/:path*",
     "/api/employer-application/:path*",
     "/api/claims-validation/:path*",
-    "/api/gap-quote/:path*",
+    "/api/gap-quote/((?!inbound).*)",
   ],
 };

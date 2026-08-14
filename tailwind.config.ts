@@ -10,7 +10,7 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["var(--font-inter)", "Inter", "sans-serif"],
+        sans: ["var(--font-inter)", "system-ui", "sans-serif"],
       },
       colors: {
         background: "hsl(var(--background))",
@@ -46,6 +46,13 @@ const config: Config = {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
+        blueprint: "#2c4a6e",
+        line: "#e6e6e6",
+        ink: "#1a1a1a",
+        soft: "#fafafa",
+        check: "#6a9a78",
+        placeholder: "#b5b5b5",
+        scrollbar: "#e0e0e0",
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
@@ -58,9 +65,11 @@ const config: Config = {
         },
       },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 3px)",
-        sm: "calc(var(--radius) - 5px)",
+        lg: "0.375rem",
+        xl: "0.5rem",
+        "2xl": "0.75rem",
+        md: "0.375rem",
+        sm: "0.25rem",
       },
     },
   },

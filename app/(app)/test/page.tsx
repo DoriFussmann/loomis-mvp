@@ -46,7 +46,7 @@ export default function TestPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-xl font-normal">Story Generator</h1>
+        <h1 className="text-[15px] text-ink">Story Generator</h1>
         <p className="text-sm text-muted-foreground mt-1">Enter three characters and we'll write a story.</p>
       </div>
 
@@ -74,7 +74,7 @@ export default function TestPage() {
               <div className="flex flex-col gap-1.5">
                 <Label>Prompt</Label>
                 <select value={promptId} onChange={(e) => setPromptId(e.target.value)}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm font-light focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+                  className="w-full rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none">
                   {prompts.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
               </div>

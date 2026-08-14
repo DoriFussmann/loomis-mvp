@@ -166,3 +166,21 @@ export interface AnalyzeGapQuoteResult {
   groups: AnalyzedGroup[];
   passingCount: number;
 }
+
+export type GapQuoteRunSource = "inbound" | "manual";
+export type GapQuoteRunStatus = "processing" | "complete" | "failed" | "non_qualifying";
+
+export interface GapQuoteRun {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  source: GapQuoteRunSource;
+  status: GapQuoteRunStatus;
+  senderEmail: string;
+  subject: string;
+  inboundMessageId: string;
+  extract: EmailExtractionResult | null;
+  result: AnalyzeGapQuoteResult | null;
+  errorMessage: string;
+  replySentAt: string | null;
+}

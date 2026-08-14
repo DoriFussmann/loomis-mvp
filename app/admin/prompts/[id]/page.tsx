@@ -84,7 +84,7 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
         <ArrowLeft className="w-4 h-4" /> Prompts
       </Link>
 
-      <h1 className="text-xl font-normal mb-1">{prompt.name}</h1>
+      <h1 className="mb-1 text-[15px] text-ink">{prompt.name}</h1>
       <p className="text-sm text-muted-foreground mb-8">Updated {new Date(prompt.updatedAt).toLocaleDateString()}</p>
 
       <form onSubmit={handleSave} className="flex flex-col gap-6">
@@ -98,7 +98,7 @@ export default function PromptDetailPage({ params }: { params: { id: string } })
             <div className="flex flex-col gap-1.5">
               <Label>Page</Label>
               <select value={form.pageSlug} onChange={(e) => setForm({ ...form, pageSlug: e.target.value })} required
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm font-light focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+                className="w-full rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none">
                 <option value="">Select a page...</option>
                 {pages.map((p) => <option key={p.slug} value={p.slug}>{p.name}</option>)}
               </select>

@@ -90,34 +90,34 @@ function CollapsiblePanel({ section, index, isOpen, onToggle, entranceReady, red
   };
 
   return (
-    <div className="rounded-lg border border-border bg-background" style={entranceStyle}>
+    <div className="rounded-xl border border-line bg-white" style={entranceStyle}>
       <button
         type="button"
         onClick={onToggle}
         aria-expanded={isOpen}
-        className="flex w-full cursor-pointer items-center justify-between px-4 py-3 text-left"
+        className="flex w-full cursor-pointer items-center justify-between px-4 py-3 text-left hover:bg-soft"
       >
-        <h2 className="text-sm font-medium text-foreground">{section.title}</h2>
+        <h2 className="text-ink">{section.title}</h2>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">
+          <span className={section.filled === section.total ? "text-accent" : "text-muted-foreground"}>
             {section.filled} / {section.total} Fields
           </span>
           <svg
-            width="14"
-            height="14"
-            viewBox="0 0 14 14"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
             fill="none"
             aria-hidden="true"
-            className="text-muted-foreground"
+            className="h-4 w-4 text-muted-foreground"
             style={chevronStyle}
           >
-            <path d="M2.5 5L7 9.5L11.5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            <polyline points="6 9 12 15 18 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>
       </button>
 
       <div ref={contentRef} style={contentWrapperStyle} onTransitionEnd={handleTransitionEnd}>
-        <div className="px-4 pb-3" style={innerContentStyle}>
+        <div className="border-t border-line px-4 pb-3" style={innerContentStyle}>
           <div className="mb-2.5 h-1.5 overflow-hidden rounded bg-muted">
             <div className="h-full rounded bg-primary transition-all duration-500" style={{ width: `${section.percent}%` }} />
           </div>
@@ -269,8 +269,8 @@ export function EmployerApplicationClient() {
 
   return (
     <div className="mt-6 grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-6">
-      <div className="rounded-lg border border-border bg-card p-6">
-        <h1 className="text-xl font-normal text-foreground">Employer Application</h1>
+      <div className="rounded-xl border border-line bg-white p-6">
+        <h1 className="text-[15px] text-ink">Employer Application</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Upload an Employer Agreement PDF to extract all sections, identify missing fields, and export the result.
         </p>
@@ -279,7 +279,7 @@ export function EmployerApplicationClient() {
           <>
             <div
               onClick={() => inputRef.current?.click()}
-              className="mt-6 rounded-lg border-2 border-dashed border-border bg-muted/40 p-10 text-center cursor-pointer hover:bg-muted/60 transition-colors"
+              className="mt-6 cursor-pointer rounded-xl border border-dashed border-line bg-soft p-10 text-center hover:bg-white"
             >
               <input
                 ref={inputRef}
@@ -318,7 +318,7 @@ export function EmployerApplicationClient() {
               type="button"
               onClick={analyze}
               disabled={!file || loading}
-              className="mt-5 inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm text-primary-foreground disabled:opacity-50"
+              className="mt-5 rounded-lg border border-line px-3 py-2 text-muted-foreground hover:text-ink disabled:opacity-40"
             >
               {loading ? "Scanning..." : "Scan Employer Application"}
             </button>
@@ -327,20 +327,20 @@ export function EmployerApplicationClient() {
 
         {result && (
           <div className="mt-6 space-y-4">
-            <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 p-3">
+            <div className="flex items-center justify-between rounded-xl border border-line px-4 py-3">
               <div>
                 <p className="text-sm text-foreground">Overall completion</p>
                 <p className="text-xs text-muted-foreground">
                   {result.totalFilled} of {result.totalFields} fields filled ({result.totalPercent}%)
                 </p>
               </div>
-              <div className="text-xs uppercase tracking-wide text-muted-foreground">
+              <div className="text-muted-foreground">
                 {result.extractionMethod === "hybrid-ai-fallback" ? "Hybrid + AI" : "Form fields"}
               </div>
             </div>
 
             {nameMismatchWarning && (
-              <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
+              <div className="rounded-xl border border-line bg-soft px-4 py-3 text-ink">
                 {nameMismatchWarning}
               </div>
             )}
@@ -363,7 +363,7 @@ export function EmployerApplicationClient() {
               <button
                 type="button"
                 onClick={() => exportEmployerApplicationToExcel(result)}
-                className="inline-flex h-9 items-center rounded-md border border-input bg-background px-4 text-sm"
+                className="rounded-lg border border-line px-3 py-2 text-muted-foreground hover:text-ink"
               >
                 Export to Excel
               </button>
@@ -374,7 +374,7 @@ export function EmployerApplicationClient() {
                   setFile(null);
                   setError("");
                 }}
-                className="inline-flex h-9 items-center rounded-md border border-input bg-background px-4 text-sm"
+                className="rounded-lg border border-line px-3 py-2 text-muted-foreground hover:text-ink"
               >
                 Start Over
               </button>
@@ -383,8 +383,8 @@ export function EmployerApplicationClient() {
         )}
       </div>
 
-      <aside className="h-fit rounded-lg border border-border bg-card p-4 lg:sticky lg:top-6">
-        <h3 className="text-sm font-medium text-foreground">Section Summary</h3>
+      <aside className="h-fit rounded-xl border border-line bg-white px-4 py-3 lg:sticky lg:top-6">
+        <h3 className="text-ink">Section Summary</h3>
         <p className="mt-1 text-xs text-muted-foreground">Filled fields by section</p>
 
         <div className="mt-4 space-y-3">

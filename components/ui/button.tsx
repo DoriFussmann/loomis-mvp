@@ -9,15 +9,15 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = "default", size = "md", children, ...props }, ref) => {
     const base =
-      "inline-flex items-center justify-center gap-2 rounded-md font-light transition-colors duration-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50";
+      "inline-flex items-center justify-center gap-2 rounded-lg border border-line bg-white text-muted-foreground outline-none transition-colors duration-200 hover:text-ink disabled:pointer-events-none disabled:opacity-40";
     const variants = {
-      default: "bg-primary text-primary-foreground hover:bg-primary/90",
-      secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-      ghost: "hover:bg-accent hover:text-accent-foreground",
-      destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-      outline: "border border-border bg-transparent hover:bg-accent hover:text-accent-foreground",
+      default: "",
+      secondary: "bg-soft text-ink hover:bg-white",
+      ghost: "border-transparent bg-transparent hover:bg-soft hover:text-ink",
+      destructive: "text-accent hover:text-ink",
+      outline: "",
     };
-    const sizes = { sm: "h-8 px-3 text-xs", md: "h-9 px-4 text-sm", lg: "h-10 px-6 text-sm" };
+    const sizes = { sm: "px-3 py-1.5", md: "px-3 py-2", lg: "px-3 py-2" };
     return (
       <button ref={ref} className={cn(base, variants[variant], sizes[size], className)} {...props}>
         {children}

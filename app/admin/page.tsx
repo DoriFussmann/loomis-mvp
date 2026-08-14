@@ -26,14 +26,14 @@ export default async function AdminDashboard() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-xl font-normal text-foreground">Dashboard</h1>
+        <h1 className="text-[15px] text-ink">Dashboard</h1>
         <p className="text-sm text-muted-foreground mt-1">Overview of your application</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map(({ label, value, href, icon: Icon }) => (
           <Link key={href} href={href}>
-            <Card className="hover:bg-accent/50 transition-colors duration-200 cursor-pointer">
+            <Card className="cursor-pointer hover:bg-soft">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm text-muted-foreground font-light">{label}</CardTitle>

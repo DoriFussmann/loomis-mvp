@@ -150,7 +150,7 @@ export default function GapRatesAdminPage() {
     <div>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-xl font-normal">GAP Rates</h1>
+          <h1 className="text-[15px] text-ink">GAP Rates</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Import the Loomis U100 rate card and edit plan designs, buckets, and the admin fee
           </p>
@@ -230,7 +230,7 @@ export default function GapRatesAdminPage() {
                 <select
                   value={form.bucketKey}
                   onChange={(e) => setForm({ ...form, bucketKey: e.target.value as GapQuoteBucketKey })}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm font-light focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  className="w-full rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none"
                 >
                   {(catalog?.buckets ?? []).map((bucket) => (
                     <option key={bucket.bucketKey} value={bucket.bucketKey}>
@@ -281,7 +281,7 @@ export default function GapRatesAdminPage() {
         <select
           value={filterBucket}
           onChange={(e) => setFilterBucket(e.target.value)}
-          className="flex h-8 rounded-md border border-input bg-transparent px-2 text-xs font-light focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          className="rounded-lg border border-line bg-white px-3 py-1.5 text-ink outline-none"
         >
           <option value="all">All buckets</option>
           {(catalog?.buckets ?? []).map((bucket) => (

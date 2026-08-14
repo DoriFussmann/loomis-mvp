@@ -3,6 +3,8 @@ import { analyzeGapQuote } from "@/lib/gapQuote/analyze";
 import { getGapQuoteCatalog } from "@/lib/data";
 import type { CensusAttachment } from "@/lib/gapQuote/schema";
 
+export const maxDuration = 60;
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();

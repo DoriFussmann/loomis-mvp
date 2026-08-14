@@ -4,7 +4,7 @@ import "./globals.css";
 
 const inter = Inter({
   subsets: ["latin"],
-  weight: ["100", "200", "300", "400", "500"],
+  weight: ["400"],
   variable: "--font-inter",
   display: "swap",
 });
@@ -21,7 +21,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={inter.variable}>
-      <body>{children}</body>
+      <body className="antialiased">{children}</body>
     </html>
   );
 }

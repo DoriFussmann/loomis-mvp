@@ -1,66 +1,51 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Users, FileText, LayoutDashboard, LogOut, Table2 } from "lucide-react";
 
 const navItems = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/users", label: "Users", icon: Users },
-  { href: "/admin/pages", label: "Pages & Prompts", icon: FileText },
-  { href: "/admin/gap-rates", label: "GAP Rates", icon: Table2 },
+  { href: "/admin", label: "Dashboard" },
+  { href: "/admin/users", label: "Users" },
+  { href: "/admin/pages", label: "Pages & Prompts" },
+  { href: "/admin/gap-rates", label: "GAP Rates" },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-background">
-        <div className="max-w-[1280px] mx-auto px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <Link
-              href="/"
-              className="text-sm font-medium text-foreground hover:opacity-75 transition-opacity duration-200"
-            >
-              Loomis
-            </Link>
-            <span className="text-xs font-normal text-muted-foreground bg-muted px-2 py-0.5 rounded-md">
-              Admin
-            </span>
-            <nav className="flex items-center gap-1">
-              {navItems.map(({ href, label, icon: Icon }) => {
-                const active = href === "/admin" ? pathname === href : pathname.startsWith(href);
-                return (
-                  <Link
-                    key={href}
-                    href={href}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-light transition-colors duration-200 ${
-                      active
-                        ? "bg-accent text-accent-foreground"
-                        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                    }`}
-                  >
-                    <Icon className="w-3.5 h-3.5" />
-                    {label}
-                  </Link>
-                );
-              })}
-            </nav>
-          </div>
-          <form action="/api/auth/logout" method="POST">
-            <button
-              type="submit"
-              className="flex items-center gap-2 text-sm font-light text-muted-foreground hover:text-foreground transition-colors duration-200"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              Sign out
-            </button>
-          </form>
+    <div className="mx-auto flex min-h-screen max-w-[1280px] flex-col bg-white">
+      <header className="flex h-12 items-center justify-between border-b border-line bg-white pr-4">
+        <div className="flex items-center gap-4">
+          <Link href="/" className="flex h-12 items-center px-4 hover:bg-soft">
+            <Image src="/loomis-logo.png" alt="Loomis" height={22} width={94} className="object-contain" />
+          </Link>
+          <nav className="flex items-center gap-3">
+            {navItems.map(({ href, label }) => {
+              const active = href === "/admin" ? pathname === href : pathname.startsWith(href);
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className={`rounded-lg border border-line px-3 py-1.5 ${
+                    active
+                      ? "bg-soft text-ink"
+                      : "text-muted-foreground hover:bg-soft hover:text-ink"
+                  }`}
+                >
+                  {label}
+                </Link>
+              );
+            })}
+          </nav>
         </div>
+        <form action="/api/auth/logout" method="POST">
+          <button type="submit" className="text-muted-foreground hover:text-ink">
+            Sign out
+          </button>
+        </form>
       </header>
-      <main className="max-w-[1280px] mx-auto px-6 py-8">
-        {children}
-      </main>
+      <main className="flex min-h-0 flex-1 flex-col px-8 py-6">{children}</main>
     </div>
   );
 }

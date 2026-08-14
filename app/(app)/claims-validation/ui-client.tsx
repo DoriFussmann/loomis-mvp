@@ -43,9 +43,9 @@ function formTypeBadge(formType: FormType): string {
 }
 
 function formTypeBadgeColor(formType: FormType): string {
-  if (formType === "UB-04") return "bg-blue-50 text-blue-700 border-blue-200";
-  if (formType === "CMS-1500") return "bg-violet-50 text-violet-700 border-violet-200";
-  return "bg-muted text-muted-foreground border-border";
+  if (formType === "UB-04") return "border-line bg-soft text-ink";
+  if (formType === "CMS-1500") return "border-line bg-soft text-ink";
+  return "border-line bg-white text-muted-foreground";
 }
 
 function matchStepLabel(step: ValidationResult["matchStep"]): string {
@@ -120,8 +120,8 @@ function StepIcon({
 }) {
   if (status === "done") {
     return (
-      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center">
-        <svg className="w-3.5 h-3.5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+      <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border border-check bg-check/10">
+        <svg className="h-3.5 w-3.5 text-check" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
         </svg>
       </span>
@@ -166,8 +166,8 @@ function MatchCard({ result }: { result: ValidationResult }) {
       </div>
 
       {/* Extracted fields */}
-      <div className="rounded-lg border border-border bg-muted/30 p-4">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Extracted from form</p>
+      <div className="rounded-xl border border-line px-4 py-3">
+        <p className="mb-3 text-muted-foreground">Extracted from form</p>
         <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
           <ExtractedField label="Member ID" value={extractedFields.memberId} />
           <ExtractedField label="Payer / Insurer" value={extractedFields.payerName} />
@@ -179,40 +179,40 @@ function MatchCard({ result }: { result: ValidationResult }) {
 
       {/* Outcome card */}
       {matchStep === "member-id" && matchedClient && (
-        <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+        <div className="rounded-xl border border-line bg-white px-4 py-3">
           <div className="flex items-center gap-2 mb-1">
             <CheckIcon color="green" />
-            <p className="text-sm font-medium text-green-800">Patient identified</p>
+            <p className="text-check">Patient identified</p>
           </div>
-          <p className="text-xs text-green-700 mb-3">{matchStepLabel(matchStep)}</p>
+          <p className="mb-3 text-muted-foreground">{matchStepLabel(matchStep)}</p>
           <ClientGrid client={matchedClient} />
           <div className="mt-3 flex gap-2 flex-wrap">
             <Badge
               icon="check"
               label="Last Name confirmed"
-              style="bg-green-100 border-green-300 text-green-800"
+              style="border-line bg-soft text-check"
             />
             <Badge
               icon={dobMatched ? "check" : "dash"}
               label={dobMatched ? "Date of Birth confirmed" : "Date of Birth not verified"}
-              style={dobMatched ? "bg-green-100 border-green-300 text-green-800" : "bg-white border-border text-muted-foreground"}
+              style={dobMatched ? "border-line bg-soft text-check" : "border-line bg-white text-muted-foreground"}
             />
             <Badge
               icon={insurerMatched ? "check" : "dash"}
               label={insurerMatched ? "Insurer confirmed" : "Insurer not verified"}
-              style={insurerMatched ? "bg-green-100 border-green-300 text-green-800" : "bg-white border-border text-muted-foreground"}
+              style={insurerMatched ? "border-line bg-soft text-check" : "border-line bg-white text-muted-foreground"}
             />
           </div>
         </div>
       )}
 
       {matchStep === "member-id-mismatch" && matchedClient && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+        <div className="rounded-xl border border-line bg-soft px-4 py-3">
           <div className="flex items-center gap-2 mb-1">
             <WarnIcon color="amber" />
-            <p className="text-sm font-medium text-amber-800">Member ID matched — Last Name differs</p>
+            <p className="text-ink">Member ID matched — Last Name differs</p>
           </div>
-          <p className="text-xs text-amber-700 mb-3">
+          <p className="mb-3 text-muted-foreground">
             The Member ID found a record in the database, but the patient last name on the form
             ({extractedFields.patientLastName || "blank"}) does not match the stored last name
             ({matchedClient.lastName}). Verify manually before proceeding.
@@ -222,23 +222,23 @@ function MatchCard({ result }: { result: ValidationResult }) {
       )}
 
       {matchStep === "name-dob" && matchedClient && (
-        <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+        <div className="rounded-xl border border-line bg-white px-4 py-3">
           <div className="flex items-center gap-2 mb-1">
             <CheckIcon color="green" />
-            <p className="text-sm font-medium text-green-800">Patient identified</p>
+            <p className="text-check">Patient identified</p>
           </div>
-          <p className="text-xs text-green-700 mb-3">{matchStepLabel(matchStep)}</p>
+          <p className="mb-3 text-muted-foreground">{matchStepLabel(matchStep)}</p>
           <ClientGrid client={matchedClient} />
         </div>
       )}
 
       {matchStep === "name-no-dob" && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+        <div className="rounded-xl border border-line bg-soft px-4 py-3">
           <div className="flex items-center gap-2 mb-1">
             <WarnIcon color="amber" />
-            <p className="text-sm font-medium text-amber-800">Last Name found — Date of Birth did not match</p>
+            <p className="text-ink">Last Name found — Date of Birth did not match</p>
           </div>
-          <p className="text-xs text-amber-700 mb-3">
+          <p className="mb-3 text-muted-foreground">
             A record with last name <span className="font-medium">{extractedFields.patientLastName}</span> was found,
             but the Date of Birth on the form
             ({extractedFields.patientDob ? formatDob(extractedFields.patientDob) : "blank"}) did not match
@@ -248,12 +248,12 @@ function MatchCard({ result }: { result: ValidationResult }) {
       )}
 
       {matchStep === "none" && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+        <div className="rounded-xl border border-line bg-soft px-4 py-3">
           <div className="flex items-center gap-2 mb-1">
             <WarnIcon color="amber" />
-            <p className="text-sm font-medium text-amber-800">No match found in database</p>
+            <p className="text-ink">No match found in database</p>
           </div>
-          <p className="text-xs text-amber-700">
+          <p className="text-muted-foreground">
             Searched by Member ID{extractedFields.memberId ? ` (${extractedFields.memberId})` : ""} and by
             patient last name{extractedFields.patientLastName ? ` (${extractedFields.patientLastName})` : ""}.
             No record matched.
@@ -264,9 +264,9 @@ function MatchCard({ result }: { result: ValidationResult }) {
   );
 }
 
-function CheckIcon({ color }: { color: "green" }) {
+function CheckIcon(_props: { color: "green" }) {
   return (
-    <span className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${color === "green" ? "bg-green-600" : "bg-blue-500"}`}>
+    <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-check">
       <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
       </svg>
@@ -274,9 +274,9 @@ function CheckIcon({ color }: { color: "green" }) {
   );
 }
 
-function WarnIcon({ color }: { color: "amber" }) {
+function WarnIcon(_props: { color: "amber" }) {
   return (
-    <span className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${color === "amber" ? "bg-amber-500" : "bg-blue-400"}`}>
+    <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-accent">
       <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
@@ -302,8 +302,8 @@ function Badge({ icon, label, style }: { icon: "check" | "dash"; label: string; 
 }
 
 function ClientGrid({ client, dimmed = false }: { client: NonNullable<ValidationResult["matchedClient"]>; dimmed?: boolean }) {
-  const text = dimmed ? "text-amber-900/70" : "text-green-900";
-  const label = dimmed ? "text-amber-700/60" : "text-green-700/70";
+  const text = dimmed ? "text-muted-foreground" : "text-ink";
+  const label = dimmed ? "text-muted-foreground" : "text-muted-foreground";
   return (
     <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
       <MatchField label="First Name" value={client.firstName} colorClass={text} labelClass={label} />
@@ -323,7 +323,7 @@ function ExtractedField({ label, value }: { label: string; value: string }) {
   );
 }
 
-function MatchField({ label, value, labelClass = "text-green-700/70", colorClass = "text-green-900" }: { label: string; value: string; labelClass?: string; colorClass?: string }) {
+function MatchField({ label, value, labelClass = "text-muted-foreground", colorClass = "text-ink" }: { label: string; value: string; labelClass?: string; colorClass?: string }) {
   return (
     <div>
       <span className={`text-xs ${labelClass}`}>{label}</span>
@@ -452,11 +452,11 @@ function ClientsModal({ onClose }: { onClose: () => void }) {
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-card border-b border-border">
                 <tr>
-                  <th className="text-left px-6 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">Last Name</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">First Name</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">Date of Birth</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">Member ID</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wide hidden sm:table-cell">Insurer</th>
+                  <th className="px-6 py-2.5 text-left text-muted-foreground">Last Name</th>
+                  <th className="px-4 py-2.5 text-left text-muted-foreground">First Name</th>
+                  <th className="px-4 py-2.5 text-left text-muted-foreground">Date of Birth</th>
+                  <th className="px-4 py-2.5 text-left text-muted-foreground">Member ID</th>
+                  <th className="hidden px-4 py-2.5 text-left text-muted-foreground sm:table-cell">Insurer</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -623,8 +623,8 @@ export function ClaimsValidationClient() {
     <>
     <div className="mt-6 grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
       {/* Main panel */}
-      <div className="rounded-lg border border-border bg-card p-6">
-        <h1 className="text-xl font-normal text-foreground">Client Validation</h1>
+      <div className="rounded-xl border border-line bg-white p-6">
+        <h1 className="text-[15px] text-ink">Client Validation</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Upload a UB-04 or CMS-1500 claim form (PDF or image) to identify the form type and
           verify the patient identity against the client database.
@@ -632,13 +632,13 @@ export function ClaimsValidationClient() {
 
         {/* Upload zone */}
         <div
-          className={`mt-5 rounded-lg border-2 border-dashed transition-colors duration-200 ${
+          className={`mt-5 cursor-pointer rounded-xl border border-dashed ${
             dragOver
-              ? "border-primary bg-primary/5"
+              ? "border-line bg-soft"
               : file
-              ? "border-primary/40 bg-primary/5"
-              : "border-border hover:border-border/80 hover:bg-muted/30"
-          } cursor-pointer`}
+              ? "border-line bg-soft"
+              : "border-line hover:bg-soft"
+          }`}
           onClick={() => fileInputRef.current?.click()}
           onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
@@ -732,8 +732,8 @@ export function ClaimsValidationClient() {
       </div>
 
       {/* Sidebar */}
-      <aside className="h-fit rounded-lg border border-border bg-card p-4 lg:sticky lg:top-6">
-        <h3 className="text-sm font-medium text-foreground mb-3">Validation steps</h3>
+      <aside className="h-fit rounded-xl border border-line bg-white px-4 py-3 lg:sticky lg:top-6">
+        <h3 className="mb-3 text-ink">Validation steps</h3>
         <StepIndicator steps={steps} />
 
         {!processing && !result && (
@@ -743,18 +743,18 @@ export function ClaimsValidationClient() {
         )}
 
         <div className="mt-4 pt-4 border-t border-border space-y-2">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Supported forms</p>
+          <p className="text-muted-foreground">Supported forms</p>
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-blue-400 flex-shrink-0" />
+              <span className="h-2 w-2 flex-shrink-0 rounded-full bg-accent" />
               <span className="text-xs text-foreground">UB-04 / UB-92</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-violet-400 flex-shrink-0" />
+              <span className="h-2 w-2 flex-shrink-0 rounded-full bg-check" />
               <span className="text-xs text-foreground">CMS-1500 / HCFA-1500</span>
             </div>
           </div>
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mt-3">Accepted files</p>
+          <p className="mt-3 text-muted-foreground">Accepted files</p>
           <p className="text-xs text-foreground">PDF, PNG, JPG, GIF, WEBP</p>
         </div>
       </aside>

@@ -1,21 +1,19 @@
 import Link from "next/link";
 import Image from "next/image";
-import { LogOut } from "lucide-react";
 
 export function SiteHeader() {
   return (
-    <header className="border-b border-border/30 bg-background">
-      <div className="max-w-[1280px] mx-auto px-6 h-14 flex items-center justify-between">
-        <Link href="/" className="hover:opacity-75 transition-opacity duration-200">
+    <header className="h-12 border-b border-line bg-white pr-4">
+      <div className="mx-auto flex h-full max-w-[1280px] items-center justify-between">
+        <Link href="/" className="flex h-full items-center px-4 hover:bg-soft">
           <Image src="/loomis-logo.png" alt="Loomis" height={22} width={94} className="object-contain" />
         </Link>
         <form action="/api/auth/logout" method="POST">
           <button
             type="submit"
-            className="flex items-center gap-2 text-sm font-light text-muted-foreground hover:text-foreground transition-colors duration-200"
+            className="text-muted-foreground hover:text-ink"
           >
-            <LogOut className="w-3.5 h-3.5" />
-            sign out
+            Sign out
           </button>
         </form>
       </div>

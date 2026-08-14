@@ -8,6 +8,7 @@ import type {
   AnalyzedGroup,
   AnalyzeGapQuoteInput,
   AnalyzeGapQuoteResult,
+  EmailExtractionResult,
   EmailGroupExtract,
   GapQuoteBucketKey,
   GapQuoteCatalog,
@@ -99,13 +100,14 @@ function priceGroup(
 
 export async function analyzeGapQuote(
   input: AnalyzeGapQuoteInput,
-  catalog: GapQuoteCatalog
+  catalog: GapQuoteCatalog,
+  preExtracted?: EmailExtractionResult
 ): Promise<AnalyzeGapQuoteResult> {
   if (!input.attachments.length) {
     throw new Error("At least one census spreadsheet is required");
   }
 
-  const extracted = await extractGapQuoteEmail(input.subject, input.body);
+  const extracted = preExtracted ?? (await extractGapQuoteEmail(input.subject, input.body));
   const groupCount = input.attachments.length;
   const candidateGroupNames = extracted.groups
     .map((item) => item.groupName.trim())

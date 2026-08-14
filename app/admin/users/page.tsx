@@ -51,7 +51,7 @@ export default function UsersPage() {
     <div>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-xl font-normal">Users</h1>
+          <h1 className="text-[15px] text-ink">Users</h1>
           <p className="text-sm text-muted-foreground mt-1">Manage user accounts and page access</p>
         </div>
         <Button onClick={() => setShowAdd(!showAdd)} size="sm">
@@ -78,7 +78,7 @@ export default function UsersPage() {
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label>Role</Label>
-                <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm font-light focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+                <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="w-full rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none">
                   <option value="user">User</option>
                   <option value="admin">Admin</option>
                 </select>
@@ -93,10 +93,10 @@ export default function UsersPage() {
                         key={department}
                         type="button"
                         onClick={() => toggleDepartment(department)}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-light border transition-colors duration-200 ${
+                        className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 ${
                           selected
-                            ? "bg-primary text-primary-foreground border-primary"
-                            : "border-border text-muted-foreground hover:border-primary/50"
+                            ? "border-line bg-soft text-ink"
+                            : "border-line text-muted-foreground hover:bg-soft hover:text-ink"
                         }`}
                       >
                         {department}
@@ -118,7 +118,7 @@ export default function UsersPage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {users.map((user) => (
           <Link key={user.id} href={`/admin/users/${user.id}`}>
-            <Card className="hover:bg-accent/40 transition-colors duration-200 cursor-pointer h-full">
+            <Card className="h-full cursor-pointer hover:bg-soft">
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 mb-1.5">
                   <Badge variant={user.role === "admin" ? "default" : "secondary"} className="text-xs">{user.role}</Badge>

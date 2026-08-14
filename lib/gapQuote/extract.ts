@@ -132,3 +132,16 @@ ${body || "(none)"}`;
 
   return { presentedBy, groups };
 }
+
+/** True when the extractor found group/employer or plan-design fields — not an empty/low-confidence parse. */
+export function isQualifyingGapQuoteExtract(extracted: EmailExtractionResult): boolean {
+  return extracted.groups.some((group) => {
+    const hasEmployer = group.groupName.length > 0;
+    const hasPlanDesign =
+      Boolean(group.planDesignLabel) || (group.deductible != null && group.benefit != null);
+    const hasSupportingFields =
+      Boolean(group.situsState) &&
+      (group.deductible != null || group.benefit != null || Boolean(group.effectiveDate));
+    return hasEmployer || hasPlanDesign || hasSupportingFields;
+  });
+}

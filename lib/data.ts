@@ -2,9 +2,14 @@ import { v4 as uuidv4 } from "uuid";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import type { User, AppPage, Prompt, Department } from "./types";
 import type {
+  AnalyzeGapQuoteResult,
+  EmailExtractionResult,
   GapQuoteBucketKey,
   GapQuoteCatalog,
   GapQuoteRateRow,
+  GapQuoteRun,
+  GapQuoteRunSource,
+  GapQuoteRunStatus,
   GapQuoteSettings,
   GapQuoteStateBucket,
 } from "./gapQuote/schema";
@@ -454,4 +459,122 @@ export async function deleteGapQuoteRate(id: string): Promise<void> {
   const supabase = createSupabaseAdminClient();
   const { error } = await supabase.from("gap_quote_rates").delete().eq("id", id);
   if (error) throw error;
+}
+
+interface GapQuoteRunRow {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  source: string;
+  status: string;
+  sender_email: string;
+  subject: string;
+  inbound_message_id: string | null;
+  extract: unknown;
+  result: unknown;
+  error_message: string | null;
+  reply_sent_at: string | null;
+}
+
+function toGapQuoteRun(row: GapQuoteRunRow): GapQuoteRun {
+  return {
+    id: row.id,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    source: row.source as GapQuoteRunSource,
+    status: row.status as GapQuoteRunStatus,
+    senderEmail: row.sender_email ?? "",
+    subject: row.subject ?? "",
+    inboundMessageId: row.inbound_message_id ?? "",
+    extract: (row.extract as EmailExtractionResult | null) ?? null,
+    result: (row.result as AnalyzeGapQuoteResult | null) ?? null,
+    errorMessage: row.error_message ?? "",
+    replySentAt: row.reply_sent_at,
+  };
+}
+
+const GAP_QUOTE_RUN_SELECT =
+  "id,created_at,updated_at,source,status,sender_email,subject,inbound_message_id,extract,result,error_message,reply_sent_at";
+
+export async function createGapQuoteRun(input: {
+  id?: string;
+  source: GapQuoteRunSource;
+  status: GapQuoteRunStatus;
+  senderEmail?: string;
+  subject?: string;
+  inboundMessageId?: string;
+  extract?: EmailExtractionResult | null;
+  result?: AnalyzeGapQuoteResult | null;
+  errorMessage?: string;
+}): Promise<GapQuoteRun> {
+  const supabase = createSupabaseAdminClient();
+  const id = input.id ?? uuidv4();
+  const { data, error } = await supabase
+    .from("gap_quote_runs")
+    .insert({
+      id,
+      source: input.source,
+      status: input.status,
+      sender_email: input.senderEmail ?? "",
+      subject: input.subject ?? "",
+      inbound_message_id: input.inboundMessageId || null,
+      extract: input.extract ?? null,
+      result: input.result ?? null,
+      error_message: input.errorMessage ?? "",
+    })
+    .select(GAP_QUOTE_RUN_SELECT)
+    .single();
+  if (error) throw error;
+  return toGapQuoteRun(data as GapQuoteRunRow);
+}
+
+export async function getGapQuoteRun(id: string): Promise<GapQuoteRun | undefined> {
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("gap_quote_runs")
+    .select(GAP_QUOTE_RUN_SELECT)
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? toGapQuoteRun(data as GapQuoteRunRow) : undefined;
+}
+
+export async function getGapQuoteRunByMessageId(messageId: string): Promise<GapQuoteRun | undefined> {
+  if (!messageId) return undefined;
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("gap_quote_runs")
+    .select(GAP_QUOTE_RUN_SELECT)
+    .eq("inbound_message_id", messageId)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? toGapQuoteRun(data as GapQuoteRunRow) : undefined;
+}
+
+export async function updateGapQuoteRun(
+  id: string,
+  patch: {
+    status?: GapQuoteRunStatus;
+    extract?: EmailExtractionResult | null;
+    result?: AnalyzeGapQuoteResult | null;
+    errorMessage?: string;
+    replySentAt?: string | null;
+  }
+): Promise<GapQuoteRun> {
+  const supabase = createSupabaseAdminClient();
+  const payload: Record<string, unknown> = {};
+  if (patch.status !== undefined) payload.status = patch.status;
+  if (patch.extract !== undefined) payload.extract = patch.extract;
+  if (patch.result !== undefined) payload.result = patch.result;
+  if (patch.errorMessage !== undefined) payload.error_message = patch.errorMessage;
+  if (patch.replySentAt !== undefined) payload.reply_sent_at = patch.replySentAt;
+
+  const { data, error } = await supabase
+    .from("gap_quote_runs")
+    .update(payload)
+    .eq("id", id)
+    .select(GAP_QUOTE_RUN_SELECT)
+    .single();
+  if (error) throw error;
+  return toGapQuoteRun(data as GapQuoteRunRow);
 }

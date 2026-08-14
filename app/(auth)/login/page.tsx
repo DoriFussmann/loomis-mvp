@@ -16,10 +16,11 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
+    const next = new URLSearchParams(window.location.search).get("next");
     const res = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, next }),
     });
     const data = await res.json();
     setLoading(false);
@@ -37,132 +38,124 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen grid lg:grid-cols-2 bg-background">
-      <aside className="relative hidden lg:flex flex-col justify-between overflow-hidden bg-primary text-primary-foreground px-12 py-12 xl:px-16 xl:py-14">
-        <div aria-hidden className="pointer-events-none absolute inset-0">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_20%_15%,hsl(var(--primary-foreground)/0.12),transparent_55%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_90%_90%,hsl(var(--primary-foreground)/0.06),transparent_45%)]" />
-          <div className="absolute -right-24 -top-28 h-[34rem] w-[34rem] rounded-full border border-primary-foreground/10" />
-          <div className="absolute -right-8 -top-12 h-[24rem] w-[24rem] rounded-full border border-primary-foreground/10" />
-          <div className="absolute -bottom-36 -left-24 h-[32rem] w-[32rem] rounded-full bg-primary-foreground/[0.05]" />
-          <div
-            className="absolute inset-0 opacity-[0.09] mix-blend-overlay"
-            style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
-            }}
-          />
-        </div>
+    <div className="flex h-screen bg-white">
+      <div className="relative hidden w-1/2 flex-col justify-between overflow-hidden bg-blueprint px-14 py-12 text-white md:flex">
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(ellipse 80% 60% at 20% 30%, rgba(120,160,200,0.35), transparent 55%), radial-gradient(ellipse 70% 50% at 85% 80%, rgba(40,70,110,0.55), transparent 50%)",
+          }}
+        />
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.07]"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(255,255,255,0.9) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.9) 1px, transparent 1px)",
+            backgroundSize: "48px 48px",
+          }}
+        />
 
         <div className="relative">
-          <div className="inline-flex items-center rounded-md bg-background px-5 py-3 shadow-sm">
+          <div className="inline-flex items-center rounded-xl bg-white px-5 py-3">
             <Image src="/loomis-logo.png" alt="Loomis" height={36} width={154} className="object-contain" />
           </div>
         </div>
 
         <div className="relative max-w-md space-y-5">
-          <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-primary-foreground/50">
-            The Loomis Company
-          </p>
-          <h1 className="text-4xl xl:text-5xl font-light tracking-tight leading-[1.15]">
+          <p className="text-[13px] text-white/50">The Loomis Company</p>
+          <h1 className="text-5xl leading-tight tracking-tight">
             Property &amp; Casualty
             <br />
             and Benefits,
             <br />
             in one place.
           </h1>
-          <p className="max-w-sm text-sm font-light leading-relaxed text-primary-foreground/60">
+          <p className="max-w-sm text-[15px] leading-relaxed text-white/70">
             Tools for the people who place coverage, review claims, and take care of groups.
           </p>
         </div>
 
-        <p className="relative text-[10px] font-medium uppercase tracking-[0.22em] text-primary-foreground/40">
-          Loomis Insurance Platform
-        </p>
-      </aside>
+        <p className="relative text-[13px] text-white/40">Loomis Insurance Platform</p>
+      </div>
 
-      <main className="flex flex-col items-center justify-center px-6 py-12 gap-8">
+      <main className="flex w-full flex-col items-center justify-center px-6 py-12 md:w-1/2">
         <Image
           src="/loomis-logo.png"
           alt="Loomis"
           height={36}
           width={154}
-          className="object-contain lg:hidden"
+          className="mb-8 object-contain md:hidden"
         />
 
-        <form onSubmit={handleSubmit} className="w-full max-w-xs flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="email" className="text-[10px] font-medium uppercase tracking-widest text-foreground/40">
-              email
-            </label>
+        <form
+          onSubmit={handleSubmit}
+          className="w-full max-w-[420px] rounded-xl border border-line bg-white p-6"
+        >
+          <div className="flex flex-col gap-4">
             <input
               id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
+              placeholder="Email"
               required
               autoComplete="email"
-              className="text-xs font-light bg-background border border-border rounded-md px-3 py-2 text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-foreground/40 transition-colors"
+              className="rounded-lg border border-line px-3 py-2 text-ink outline-none placeholder:text-placeholder"
             />
-          </div>
 
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="password" className="text-[10px] font-medium uppercase tracking-widest text-foreground/40">
-              password
-            </label>
             <div className="relative">
               <input
                 id="password"
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder="Password"
                 required
                 autoComplete="current-password"
-                className="w-full text-xs font-light bg-background border border-border rounded-md px-3 py-2 pr-9 text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-foreground/40 transition-colors"
+                className="w-full rounded-lg border border-line px-3 py-2 pr-10 text-ink outline-none placeholder:text-placeholder"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((visible) => !visible)}
                 aria-label={showPassword ? "Hide password" : "Show password"}
                 aria-pressed={showPassword}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-muted-foreground hover:text-foreground transition-colors duration-[200ms] ease-out focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-ink"
               >
-                {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
+
+            {error && <p className="text-[13px] text-accent">{error}</p>}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="rounded-lg border border-line px-3 py-2 text-muted-foreground hover:text-ink disabled:opacity-40"
+            >
+              Continue
+            </button>
+
+            <p className="text-[13px] text-muted-foreground">Access is managed by your administrator.</p>
           </div>
-
-          {error && <p className="text-xs text-destructive font-light">{error}</p>}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="mt-1 px-4 py-1.5 text-sm font-light rounded-md border border-foreground/30 text-foreground bg-transparent hover:bg-foreground/5 transition-colors disabled:opacity-40"
-          >
-            {loading ? "signing in..." : "sign in"}
-          </button>
         </form>
 
-        <div className="w-full max-w-xs rounded-md border border-dashed border-border bg-muted/30 px-4 py-3">
-          <p className="text-[10px] font-medium uppercase tracking-widest text-foreground/40 mb-2">demo credentials</p>
-          <div className="flex flex-col gap-1">
-            {[
-              { label: "admin", email: "admin@admin.com", password: "password" },
-              { label: "user", email: "user@example.com", password: "password" },
-              { label: "benefits user", email: "benefits@example.com", password: "password" },
-            ].map((cred) => (
-              <button
-                key={cred.label}
-                type="button"
-                onClick={() => fillCredentials(cred.email, cred.password)}
-                className="flex items-center justify-between rounded px-2 py-1.5 hover:bg-muted transition-colors text-left"
-              >
-                <span className="text-xs font-light text-foreground">{cred.label}</span>
-                <span className="text-[10px] font-light text-muted-foreground/70 font-mono">{cred.email}</span>
-              </button>
-            ))}
-          </div>
+        <div className="mt-6 w-full max-w-[420px]">
+          {[
+            { label: "admin", email: "admin@admin.com", password: "password" },
+            { label: "user", email: "user@example.com", password: "password" },
+            { label: "benefits", email: "benefits@example.com", password: "password" },
+          ].map((cred) => (
+            <button
+              key={cred.label}
+              type="button"
+              onClick={() => fillCredentials(cred.email, cred.password)}
+              className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-muted-foreground hover:bg-soft hover:text-ink"
+            >
+              <span>{cred.label}</span>
+              <span>{cred.email}</span>
+            </button>
+          ))}
         </div>
       </main>
     </div>

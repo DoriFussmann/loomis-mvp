@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getUserByAuthId } from "@/lib/data";
 import { getDefaultRouteForDepartments } from "@/lib/department-routing";
+import { safeNextPath } from "@/lib/safe-next-path";
 
 export async function POST(request: NextRequest) {
-  const { email, password } = await request.json();
+  const { email, password, next } = await request.json();
 
   if (!email || !password) {
     return NextResponse.json({ success: false, error: "Email and password required" }, { status: 400 });
@@ -27,7 +28,7 @@ export async function POST(request: NextRequest) {
     data: {
       role: user.role,
       name: user.name,
-      destination: getDefaultRouteForDepartments(user.departments ?? []),
+      destination: safeNextPath(next) ?? getDefaultRouteForDepartments(user.departments ?? []),
     },
   });
 }

@@ -45,7 +45,7 @@ export default function PagesAdminPage() {
     <div>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-xl font-normal">Pages & Prompts</h1>
+          <h1 className="text-[15px] text-ink">Pages & Prompts</h1>
           <p className="text-sm text-muted-foreground mt-1">Define pages, their variables, and associated prompts</p>
         </div>
         <Button onClick={() => setShowAdd(!showAdd)} size="sm">
@@ -105,7 +105,7 @@ export default function PagesAdminPage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {pages.map((page) => (
           <Link key={page.id} href={`/admin/pages/${page.id}`}>
-            <Card className="hover:bg-accent/40 transition-colors duration-200 cursor-pointer h-full">
+            <Card className="h-full cursor-pointer hover:bg-soft">
               <CardContent className="p-4">
                 <p className="text-sm font-normal">{page.name}</p>
               </CardContent>

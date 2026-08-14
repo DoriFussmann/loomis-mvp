@@ -28,6 +28,7 @@ A lightweight multi-user web application built for **Loomis Insurance** with:
 | Excel | `xlsx` npm package | Census parse, rate-card import, Excel export |
 | PDF generation | `@react-pdf/renderer` | Branded GAP quote proposals |
 | PDF read | `pdf-lib` | Form-field extraction only (not generation) |
+| Email | SendGrid (Inbound Parse + Mail Send) | GAP quote inbound mailbox + outbound replies |
 | Deployment | Vercel (GitHub integration) | Zero-config, works with App Router |
 
 ---
@@ -42,7 +43,7 @@ A lightweight multi-user web application built for **Loomis Insurance** with:
 │   ├── (auth)/
 │   │   └── login/page.tsx                # Standalone login — no global header
 │   ├── (app)/                            # Route group: all user-facing pages
-│   │   ├── layout.tsx                    # Provides SiteHeader + max-w-[1280px] mx-auto px-6 py-8 main
+│   │   ├── layout.tsx                    # Provides SiteHeader + max-w-[1280px] mx-auto px-8 py-6 main
 │   │   ├── pnc/page.tsx                  # Property & Casualty dashboard
 │   │   ├── benefits/page.tsx             # Benefits dashboard
 │   │   ├── employer-application/
@@ -53,13 +54,16 @@ A lightweight multi-user web application built for **Loomis Insurance** with:
 │   │   │   └── ui-client.tsx
 │   │   ├── gap-quote/
 │   │   │   ├── page.tsx
-│   │   │   └── ui-client.tsx             # Email + census → checks → tiers → proposal
+│   │   │   ├── ui-client.tsx             # Email + census → checks → tiers → proposal
+│   │   │   └── results/[runId]/
+│   │   │       ├── page.tsx              # Persisted inbound (or stored) run → Results screen
+│   │   │       └── not-found.tsx
 │   │   ├── loss-run-analyzer/
 │   │   │   └── page.tsx                  # Loss Run Analyzer — primary production feature
 │   │   └── test/
 │   │       └── page.tsx                  # Demo page
 │   ├── admin/
-│   │   ├── layout.tsx                    # Admin top nav (logo + Admin badge + nav links + logout)
+│   │   ├── layout.tsx                    # Admin top nav (Loomis logo + nav links + Sign out)
 │   │   ├── page.tsx
 │   │   ├── users/
 │   │   │   ├── page.tsx
@@ -92,13 +96,17 @@ A lightweight multi-user web application built for **Loomis Insurance** with:
 │   │   └── extract.ts                    # Hybrid extraction (form fields + AI fallback)
 │   ├── gapQuote/
 │   │   ├── schema.ts
-│   │   ├── extract.ts                    # Anthropic parse of pasted broker email
+│   │   ├── extract.ts                    # Anthropic parse of pasted/inbound broker email
 │   │   ├── parseCensus.ts                # xlsx census → subscriber + tier counts
 │   │   ├── parseRateCard.ts              # Locked mapping to Loomis U100 rate card
+│   │   ├── parseInboundEmail.ts          # SendGrid Inbound Parse (multipart) + JSON test payload
+│   │   ├── inbound.ts                    # Qualify → analyze → persist → reply
 │   │   ├── eligibility.ts
 │   │   ├── rateLookup.ts
 │   │   ├── analyze.ts
 │   │   └── proposalPdf.tsx               # 5-page branded proposal
+│   ├── email/
+│   │   └── send.ts                       # SendGrid Mail Send for GAP quote replies
 │   └── exportToExcel.ts                  # Client-side Excel export for loss run reports
 ├── reference/gap-quote/
 │   ├── rate-card.xlsx                    # Loomis U100 rate card (importer source of truth)
@@ -112,7 +120,8 @@ A lightweight multi-user web application built for **Loomis Insurance** with:
 ├── supabase/
 │   └── migrations/
 │       ├── 20260515_initial_schema.sql   # Tables + RLS policies + helper functions
-│       └── 20260812_gap_quote_rates.sql  # GAP rate buckets, rates, admin fee
+│       ├── 20260812_gap_quote_rates.sql  # GAP rate buckets, rates, admin fee
+│       └── 20260814_gap_quote_runs.sql   # Persisted GAP quote runs (inbound + edits)
 ├── app/api/
 │   ├── auth/
 │   │   ├── login/route.ts
@@ -128,7 +137,9 @@ A lightweight multi-user web application built for **Loomis Insurance** with:
 │   │   ├── gap-rates/[id]/route.ts
 │   │   └── gap-rates/import/route.ts
 │   ├── gap-quote/
-│   │   └── analyze/route.ts              # POST — email + census → checks + pricing
+│   │   ├── analyze/route.ts              # POST — email + census → checks + pricing
+│   │   ├── inbound/route.ts              # POST — SendGrid Inbound Parse webhook (no session)
+│   │   └── runs/[id]/route.ts            # GET/PATCH — persisted run for results page
 │   ├── analyze-loss-run/
 │   │   └── route.ts                      # POST — two-stage PDF extraction via Anthropic
 │   └── run-prompt/route.ts
@@ -236,6 +247,7 @@ Primary persistence now lives in Supabase Postgres:
 - `public.users` (`id`, `auth_user_id`, `name`, `email`, `role`, `allowed_pages`, `departments`)
 - `public.pages` (`id`, `name`, `slug`, `description`, `variables`)
 - `public.prompts` (`id`, `name`, `page_slug`, `template`, `created_at`, `updated_at`)
+- `public.gap_quote_runs` (`id`, `source`, `status`, `sender_email`, `subject`, `extract`, `result`, …) — inbound quote results
 
 RLS is enabled on all three tables. Policy intent:
 - Admin users can read/write all rows.
@@ -258,6 +270,10 @@ NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
 SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
 IMPORT_USER_PASSWORD=<optional migration password default>
+SENDGRID_API_KEY=<sendgrid api key>
+GAP_QUOTE_INBOUND_WEBHOOK_SECRET=<random token for inbound webhook URL>
+GAP_QUOTE_FROM_EMAIL=gapquote@parse.epicaiproducts.com
+GAP_QUOTE_PUBLIC_BASE_URL=https://www.epicaiproducts.com
 ```
 
 `NEXT_PUBLIC_SUPABASE_URL` must be the project origin only (`https://<ref>.supabase.co`). Do not paste the REST endpoint (`.../rest/v1/`) — that makes login fail with "Invalid credentials".
@@ -269,6 +285,10 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 IMPORT_USER_PASSWORD=
+SENDGRID_API_KEY=
+GAP_QUOTE_INBOUND_WEBHOOK_SECRET=
+GAP_QUOTE_FROM_EMAIL=gapquote@parse.epicaiproducts.com
+GAP_QUOTE_PUBLIC_BASE_URL=https://www.epicaiproducts.com
 ```
 
 ---
@@ -290,6 +310,8 @@ IMPORT_USER_PASSWORD=
    - `/pnc` → requires `departments` contains `P&C` (or admin role)
    - `/benefits` → requires `departments` contains `Benefits` (or admin role)
    - `/employer-application` and `/api/employer-application/*` → requires `Benefits` department (or admin role)
+   - `/gap-quote` and `/gap-quote/results/[runId]` → requires `Benefits` department (or admin role); unauthenticated users are sent to `/login?next=…` and returned to the results link after sign-in
+   - `/api/gap-quote/*` → requires `Benefits` department (or admin role). `/api/gap-quote/inbound` is excluded from the middleware matcher and authenticates with `GAP_QUOTE_INBOUND_WEBHOOK_SECRET` in the route handler
    - `/api/analyze-loss-run` → requires valid session (any role)
    - `/loss-run-analyzer`, `/test` → requires valid session + slug in `allowedPages[]`
 7. Logout calls `supabase.auth.signOut()` then redirects to `/login`
@@ -297,7 +319,22 @@ IMPORT_USER_PASSWORD=
 ### middleware.ts matcher
 ```typescript
 export const config = {
-  matcher: ["/admin/:path*", "/api/admin/:path*", "/api/analyze-loss-run", "/test", "/loss-run-analyzer", "/pnc", "/benefits", "/employer-application", "/api/employer-application/:path*"],
+  matcher: [
+    "/admin/:path*",
+    "/api/admin/:path*",
+    "/api/analyze-loss-run",
+    "/test",
+    "/loss-run-analyzer",
+    "/pnc",
+    "/benefits",
+    "/employer-application",
+    "/claims-validation",
+    "/gap-quote",
+    "/gap-quote/:path*",
+    "/api/employer-application/:path*",
+    "/api/claims-validation/:path*",
+    "/api/gap-quote/((?!inbound).*)",
+  ],
 }
 ```
 
@@ -334,6 +371,9 @@ All responses: `{ success: boolean, data?: any, error?: string }`
 | POST | `/api/analyze-loss-run` | User (session) | Two-stage loss run PDF extraction |
 | POST | `/api/employer-application/extract` | Benefits/Admin | Extract employer agreement sections/fields, missing flags, and completion metrics |
 | POST | `/api/gap-quote/analyze` | Benefits/Admin | Parse email + census, run eligibility checks, price passing groups |
+| POST | `/api/gap-quote/inbound` | Webhook secret | SendGrid Inbound Parse: qualify, analyze, persist, reply with results link |
+| GET | `/api/gap-quote/runs/[id]` | Benefits/Admin | Load a persisted quote run |
+| PATCH | `/api/gap-quote/runs/[id]` | Benefits/Admin | Save See Proposal / entity-name edits on a persisted run |
 | GET | `/api/admin/gap-rates` | Admin | Load GAP rate catalog (buckets, rates, admin fee) |
 | POST | `/api/admin/gap-rates` | Admin | Create a rate row, or save admin fee when `adminFee` is sent without deductible |
 | PATCH | `/api/admin/gap-rates/[id]` | Admin | Update a rate row |
@@ -344,17 +384,38 @@ All responses: `{ success: boolean, data?: any, error?: string }`
 
 ## GAP Quote Automation
 
-Benefits-department tool (`department === "Benefits"` or admin). Embedded on `/benefits?tool=gap-quote` with `forceLive: true` (no `pages.json` row). Standalone route: `/gap-quote`.
+Benefits-department tool (`department === "Benefits"` or admin). Embedded on `/benefits?tool=gap-quote` with `forceLive: true` (no `pages.json` row). Standalone route: `/gap-quote`. Persisted inbound results: `/gap-quote/results/[runId]`.
 
-### Flow
+### Manual flow
 1. Paste email subject/body and attach one `.xlsx` census per billing group
 2. Checks (staggered): split detection, subscriber lives 5–99, situs state bucket, plan-design match
 3. Tier counts for passing groups: EE / EE+SP / EE+CH / Family
 4. Results and proposal Monthly Rates show one consolidated rate per tier (base rate + admin fee already summed). A footnote reads: "The rates above include an administrative fee." Un-summed base rates stay internal (admin rate table). See Proposal edits consolidated tier rates only. Download a 5-page branded PDF per group.
 
-Census parsing keys off `Rel Code` when present (`SB` subscriber, `SP` spouse, `DE` dependent) and also accepts longer aliases (`Employee`, `Subscriber`, etc.) because broker formats vary. Subscriber tier counts prefer the `Tier Coverage` column on subscriber rows rather than reconstructing family composition. Entity names are proposed from filename, census employer/group fields, and email candidates, with a confidence label. A candidate name is assigned at most once per batch; if two files are genuinely ambiguous (no unique filename or in-file signal), both stay low-confidence with every candidate in the dropdown. The user must confirm (or type a custom name) before See Proposal / PDF export, except the 1-file / 1-group case which auto-confirms. Results include a **See Proposal** modal for inline edits; Save stays in React state, and PDF export uses the current (possibly edited) values.
+Census parsing keys off `Rel Code` when present (`SB` subscriber, `SP` spouse, `DE` dependent) and also accepts longer aliases (`Employee`, `Subscriber`, etc.) because broker formats vary. Subscriber tier counts prefer the `Tier Coverage` column on subscriber rows rather than reconstructing family composition. Entity names are proposed from filename, census employer/group fields, and email candidates, with a confidence label. A candidate name is assigned at most once per batch; if two files are genuinely ambiguous (no unique filename or in-file signal), both stay low-confidence with every candidate in the dropdown. The user must confirm (or type a custom name) before See Proposal / PDF export, except the 1-file / 1-group case which auto-confirms. Results include a **See Proposal** modal for inline edits; Save stays in React state on the manual path, and PDF export uses the current (possibly edited) values.
 
-Quotes are ephemeral (React state only). The only persisted data is the rate table.
+The manual paste/upload path remains ephemeral (React state only). Inbound email runs are persisted in `gap_quote_runs`.
+
+### Inbound email trigger
+Mailbox: `gapquote@parse.epicaiproducts.com`. Brokers forward a quote request to that address. SendGrid Inbound Parse POSTs the parsed message to `/api/gap-quote/inbound?token=<GAP_QUOTE_INBOUND_WEBHOOK_SECRET>`.
+
+**Qualification (before the full pipeline):**
+- At least one spreadsheet attachment (`.xlsx` / `.xls`). Signature images do not count. No census file → do not analyze; reply with an explanation.
+- Anthropic extract must find recognizable quote fields (group/employer name, plan design, or situs + deductible/benefit/effective date). Empty or low-confidence extract → do not analyze; reply with an explanation.
+
+**After a qualifying email:** run the same `analyzeGapQuote` pipeline (including groups that fail checks), persist the run, and reply to the sender with a short message plus `https://www.epicaiproducts.com/gap-quote/results/[runId]`. Pipeline errors are surfaced in the reply rather than dropped. The results page reuses `GapQuoteClient` in stored-run mode (See Proposal + PDF). Edits PATCH `/api/gap-quote/runs/[id]`. Access is the existing Benefits/admin login; the link deep-links after `/login?next=…`. No token-based public access.
+
+Webhook URL for local testing also accepts JSON (`Content-Type: application/json`) with `{ from, subject, text, attachments: [{ fileName, mediaType, fileBase64 }] }` plus the same `token` query param.
+
+### Infra / DNS (epicaiproducts.com — already live)
+Apex MX stays on **Google Workspace** (`aspmx.l.google.com` etc.). Inbound parse uses a dedicated subdomain so Workspace mail is untouched:
+
+1. **Inbound MX (done).** `parse.epicaiproducts.com` MX → `mx.sendgrid.net`. SendGrid Inbound Parse host is `parse.epicaiproducts.com`. Receiving address: `gapquote@parse.epicaiproducts.com`.
+2. **Inbound Parse destination.** `https://www.epicaiproducts.com/api/gap-quote/inbound?token=<GAP_QUOTE_INBOUND_WEBHOOK_SECRET>`. Leave “POST the raw, full MIME message” **unchecked** (the app expects parsed multipart fields).
+3. **Outbound (replies).** From address is `gapquote@parse.epicaiproducts.com` (`GAP_QUOTE_FROM_EMAIL`). Authenticate `parse.epicaiproducts.com` in SendGrid (DKIM CNAMEs on that subdomain). Add/update **SPF** on `parse.epicaiproducts.com` to include SendGrid (`include:sendgrid.net`). Keep apex SPF/DMARC for Workspace as they are. Without subdomain auth, replies land in spam or bounce.
+4. Apply `supabase/migrations/20260814_gap_quote_runs.sql` in the Supabase SQL editor before the first inbound email.
+
+Vercel serverless request body limit is ~4.5MB — oversized census emails will fail the webhook.
 
 ### Rate card mapping (`reference/gap-quote/rate-card.xlsx`, sheet `Rate cards`)
 Header row: `Deductible` | `Limit` | five repeating blocks of `EE` | `EE + SP` | `EE + CH` | `FAMILY`
@@ -379,16 +440,17 @@ FL uses Standard when lives ≤ 50 and the FL 50–100 bucket when lives ≥ 51.
 
 ## Design System Summary
 
-- **Font:** Inter 300/400/500 via `next/font/google` (CSS variable `--font-inter`)
-- **Colors:** All via CSS custom properties (`hsl(var(--token))`), never hardcoded inline
-- **Theme:** Light by default; dark mode via `.dark` class on `<html>`
-- **Radius:** Base `0.5rem`
-- **Shadows:** `shadow-sm` max
-- **Icons:** Lucide React throughout
-- **Inline styles:** Use `hsl(var(--token))` syntax — raw `var(--token)` will not render correctly
-- **Max content width:** 1280px (`max-w-[1280px]`) everywhere
-- **Page spacing:** `px-6 py-8` on content wrappers, `gap-6` between cards, `mb-6` below headings
-- **Global header height:** `h-14` (56px) — provided by `SiteHeader` or `AdminLayout`
+- **Font:** Inter 400 only via `next/font/google` (`--font-inter`). Global `font-weight: 400 !important`; no bold. Body `13px`, letter-spacing `-0.01em`, antialiased.
+- **Palette:** White surfaces (`#ffffff`), ink (`#1a1a1a`), line (`#e6e6e6`), muted (`#8a8a8a`), soft (`#fafafa`), accent (`#2f5eff`), check (`#6a9a78`), blueprint (`#2c4a6e`). Named tokens in `tailwind.config.ts`; CSS variables in `globals.css` still use `hsl(var(--token))` for inline styles.
+- **Radius:** `lg` 6px (controls), `xl` 8px (cards), `2xl` 12px
+- **Shadows:** none
+- **Buttons:** ghost outlined (`border-line`, muted → ink on hover). No filled primary.
+- **Cards:** white, `1px` line border, `rounded-xl`, header/body `px-4 py-3`, hover `bg-soft`
+- **Icons:** Lucide React
+- **Max content width:** 1280px (`max-w-[1280px]`)
+- **Page spacing:** `px-8 py-6` on content wrappers
+- **Global header height:** `h-12` (48px) — `SiteHeader` or `AdminLayout`, Loomis logo retained
+- **Login:** 50/50 blueprint panel (`#2c4a6e` + radials + 48px grid) and `max-w-[420px]` sign-in card
 - **Route groups:** `(auth)/` = no header; `(app)/` = SiteHeader + standard padding; `admin/` = admin top nav
 
 ---
@@ -398,6 +460,7 @@ FL uses Standard when lives ≤ 50 and the FL 50–100 bucket when lives ≥ 51.
 ```bash
 npm install
 # ensure .env has ANTHROPIC_API_KEY + Supabase env vars
+# for inbound GAP quotes also set SENDGRID_API_KEY + GAP_QUOTE_INBOUND_WEBHOOK_SECRET
 npm run dev
 # → http://localhost:3000
 ```
@@ -407,6 +470,7 @@ npm run dev
 # 1) Apply SQL in Supabase SQL editor:
 #    supabase/migrations/20260515_initial_schema.sql
 #    supabase/migrations/20260812_gap_quote_rates.sql
+#    supabase/migrations/20260814_gap_quote_runs.sql
 
 # 2) Import legacy JSON data into Supabase:
 npm run import:supabase
@@ -426,6 +490,10 @@ npm run verify:supabase
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `SUPABASE_SERVICE_ROLE_KEY`
+   - `SENDGRID_API_KEY`
+   - `GAP_QUOTE_INBOUND_WEBHOOK_SECRET`
+   - `GAP_QUOTE_FROM_EMAIL`
+   - `GAP_QUOTE_PUBLIC_BASE_URL`
 4. Deploy — zero config, Next.js auto-detected
 
 ---
@@ -441,6 +509,8 @@ npm run verify:supabase
 | Excel styling | Basic — no charts | Add chart sheets using xlsx chart API |
 | Benchmarking | Removed (no reliable data source) | Add if Loomis provides benchmark data |
 | Streaming | Full response only | Switch to Vercel AI SDK streaming for better UX on large files |
+| Admin inbound run history | Not built | Add an admin list of `gap_quote_runs` |
+| GAP inbound DNS | Live: MX on `parse.epicaiproducts.com` only; apex stays Google Workspace | Keep `GAP_QUOTE_FROM_EMAIL=gapquote@parse.epicaiproducts.com` |
 
 ---
 
@@ -467,4 +537,4 @@ npm run verify:supabase
 
 - Project owner: Dori / The Night Ventures
 - Vercel project: (fill in)
-- Domain / DNS: epicaiproducts.com (fill in Vercel domain config)
+- Domain / DNS: epicaiproducts.com — Vercel for the web app. Apex mail is Google Workspace. GAP inbound mailbox is `gapquote@parse.epicaiproducts.com` (MX on the parse subdomain only; see GAP Quote → Infra / DNS).
