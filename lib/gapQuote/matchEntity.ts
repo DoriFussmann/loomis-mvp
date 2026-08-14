@@ -1,3 +1,5 @@
+import type { AnalyzedGroup } from "./schema";
+
 export type NameConfidence = "high" | "medium" | "none";
 
 export interface EntityProposal {
@@ -7,6 +9,26 @@ export interface EntityProposal {
 }
 
 const CONFIDENT_SCORE = 80;
+const FILENAME_NOISE = new Set([
+  "census",
+  "file",
+  "group",
+  "quote",
+  "sheet",
+  "xls",
+  "xlsx",
+  "spreadsheet",
+  "data",
+  "list",
+  "employees",
+  "employee",
+  "enrollment",
+  "member",
+  "members",
+  "billing",
+  "lives",
+  "report",
+]);
 
 function fileStem(fileName: string): string {
   return fileName.replace(/\.[^.]+$/, "");
@@ -19,6 +41,12 @@ export function normalizeName(value: string): string {
     .replace(/\b(inc|llc|ltd|corp|co|company)\b/g, "")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function distinctiveTokens(value: string): string[] {
+  return normalizeName(value)
+    .split(" ")
+    .filter((token) => token.length >= 4 && !FILENAME_NOISE.has(token) && !/^\d+$/.test(token));
 }
 
 export function scoreNameOverlap(left: string, right: string): number {
@@ -43,10 +71,45 @@ export function scoreNameOverlap(left: string, right: string): number {
   return Math.round((100 * hits) / tokensB.length);
 }
 
-function signalScore(fileName: string, censusEmployerName: string, candidate: string): number {
+/** Unique / distinctive keywords in a filename or census field vs one candidate. */
+function keywordScore(signal: string, candidate: string, otherCandidates: string[]): number {
+  const haystack = normalizeName(signal);
+  if (!haystack) return 0;
+
+  const tokens = distinctiveTokens(candidate);
+  let uniqueHits = 0;
+  let sharedHits = 0;
+  for (const token of tokens) {
+    if (!haystack.includes(token)) continue;
+    sharedHits += 1;
+    const inOther = otherCandidates.some((other) => normalizeName(other).includes(token));
+    if (!inOther) uniqueHits += 1;
+  }
+
+  if (uniqueHits >= 2) return 100;
+  if (uniqueHits === 1) return 92;
+  if (sharedHits >= 2) return 85;
+  return 0;
+}
+
+function signalScore(
+  fileName: string,
+  censusEmployerName: string,
+  candidate: string,
+  otherCandidates: string[]
+): number {
   const signals = [fileStem(fileName), censusEmployerName].filter((value) => value.trim().length > 0);
   if (signals.length === 0) return 0;
-  return Math.max(0, ...signals.map((signal) => scoreNameOverlap(signal, candidate)));
+  return Math.max(
+    0,
+    ...signals.map((signal) =>
+      Math.max(keywordScore(signal, candidate, otherCandidates), scoreNameOverlap(signal, candidate))
+    )
+  );
+}
+
+function confirmedProposal(proposedName: string, nameConfidence: NameConfidence): EntityProposal {
+  return { proposedName, nameConfidence, nameConfirmed: true };
 }
 
 export function proposeEntityNamesForBatch(
@@ -58,7 +121,7 @@ export function proposeEntityNamesForBatch(
   );
 
   if (files.length === 1 && named.length === 1) {
-    return [{ proposedName: named[0], nameConfidence: "high", nameConfirmed: true }];
+    return [confirmedProposal(named[0], "high")];
   }
 
   const proposals: EntityProposal[] = files.map(() => ({
@@ -72,7 +135,10 @@ export function proposeEntityNamesForBatch(
   }
 
   const scores = files.map((file) =>
-    named.map((candidate) => signalScore(file.fileName, file.censusEmployerName, candidate))
+    named.map((candidate) => {
+      const others = named.filter((name) => name !== candidate);
+      return signalScore(file.fileName, file.censusEmployerName, candidate, others);
+    })
   );
 
   const fileAssigned = files.map(() => false);
@@ -106,26 +172,56 @@ export function proposeEntityNamesForBatch(
     if (fileAssigned[claim.fileIndex] || candidateAssigned.has(candidate)) continue;
     fileAssigned[claim.fileIndex] = true;
     candidateAssigned.add(candidate);
-    proposals[claim.fileIndex] = {
-      proposedName: candidate,
-      nameConfidence: claim.score >= 85 ? "high" : "medium",
-      nameConfirmed: false,
-    };
+    proposals[claim.fileIndex] = confirmedProposal(candidate, claim.score >= 85 ? "high" : "medium");
   }
 
   const remainingFiles = files.map((_, index) => index).filter((index) => !fileAssigned[index]);
   const remainingCandidates = named.filter((name) => !candidateAssigned.has(name));
 
-  if (remainingFiles.length === 1 && remainingCandidates.length === 1) {
-    const fileIndex = remainingFiles[0];
-    proposals[fileIndex] = {
-      proposedName: remainingCandidates[0],
-      nameConfidence: "medium",
-      nameConfirmed: false,
-    };
+  // N files / N names: if keyword matching locked N-1, the last pair is assigned by elimination.
+  if (
+    remainingFiles.length === 1 &&
+    remainingCandidates.length === 1 &&
+    files.length === named.length &&
+    candidateAssigned.size > 0
+  ) {
+    proposals[remainingFiles[0]] = confirmedProposal(remainingCandidates[0], "medium");
   }
 
   return proposals;
+}
+
+export function applyEntityNameProposals(groups: AnalyzedGroup[]): AnalyzedGroup[] {
+  if (groups.length === 0) return groups;
+  const proposals = proposeEntityNamesForBatch(
+    groups.map((group) => ({
+      fileName: group.fileName,
+      censusEmployerName: group.censusEmployerName,
+    })),
+    groups[0].candidateGroupNames
+  );
+
+  return groups.map((group, index) => {
+    if (group.nameConfirmed) return group;
+    const proposal = proposals[index];
+    if (!proposal?.proposedName || !proposal.nameConfirmed) return group;
+    return {
+      ...group,
+      employerName: proposal.proposedName,
+      proposedName: proposal.proposedName,
+      nameConfidence: proposal.nameConfidence,
+      nameConfirmed: true,
+      priced: group.priced
+        ? {
+            ...group.priced,
+            employerName: proposal.proposedName,
+            proposedName: proposal.proposedName,
+            nameConfirmed: true,
+            nameConfidence: proposal.nameConfidence,
+          }
+        : group.priced,
+    };
+  });
 }
 
 export function proposeEntityName(input: {

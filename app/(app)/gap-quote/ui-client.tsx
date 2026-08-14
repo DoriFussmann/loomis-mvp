@@ -18,6 +18,7 @@ import {
   type NameConfidence,
   type PricedGroup,
 } from "@/lib/gapQuote/schema";
+import { applyEntityNameProposals } from "@/lib/gapQuote/matchEntity";
 
 type Screen = "input" | "checks" | "tiers" | "results";
 
@@ -120,7 +121,13 @@ export function GapQuoteClient({ storedRun }: { storedRun?: GapQuoteStoredRun })
   const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<AnalyzeGapQuoteResult | null>(storedRun?.result ?? null);
+  const [result, setResult] = useState<AnalyzeGapQuoteResult | null>(() => {
+    if (!storedRun) return null;
+    return {
+      ...storedRun.result,
+      groups: applyEntityNameProposals(storedRun.result.groups),
+    };
+  });
   const [persistError, setPersistError] = useState("");
   const [revealedChecks, setRevealedChecks] = useState(0);
   const [revealedTiers, setRevealedTiers] = useState(0);
@@ -184,23 +191,36 @@ export function GapQuoteClient({ storedRun }: { storedRun?: GapQuoteStoredRun })
     };
   }
 
-  async function persistRun(next: AnalyzeGapQuoteResult) {
-    if (!storedRun) return;
+  function persistRun(next: AnalyzeGapQuoteResult) {
+    if (!storedRun) return Promise.resolve();
     setPersistError("");
-    try {
-      const response = await fetch(`/api/gap-quote/runs/${storedRun.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ result: next }),
-      });
-      const json = await response.json();
-      if (!json.success) {
-        setPersistError(json.error ?? "Could not save changes.");
+    return (async () => {
+      try {
+        const response = await fetch(`/api/gap-quote/runs/${storedRun.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ result: next }),
+        });
+        const json = await response.json();
+        if (!json.success) {
+          setPersistError(json.error ?? "Could not save changes.");
+        }
+      } catch (err) {
+        setPersistError(err instanceof Error ? err.message : "Could not save changes.");
       }
-    } catch (err) {
-      setPersistError(err instanceof Error ? err.message : "Could not save changes.");
-    }
+    })();
   }
+
+  const didPersistResolved = useRef(false);
+  useEffect(() => {
+    if (!storedRun || !result || didPersistResolved.current) return;
+    const changed = result.groups.some(
+      (group, index) => group.nameConfirmed && !storedRun.result.groups[index]?.nameConfirmed
+    );
+    if (!changed) return;
+    didPersistResolved.current = true;
+    void persistRun(result);
+  }, [storedRun, result]);
 
   function patchGroup(id: string, patch: Partial<AnalyzedGroup>) {
     if (!result) return;
@@ -324,12 +344,9 @@ export function GapQuoteClient({ storedRun }: { storedRun?: GapQuoteStoredRun })
       <h1 className="text-[15px] text-ink">GAP Quote</h1>
       <p className="mt-2 text-sm text-muted-foreground mb-6">
         {storedRun
-          ? [
-              storedRun.subject ? `Request: ${storedRun.subject}` : "Inbound quote request",
-              storedRun.senderEmail ? `from ${storedRun.senderEmail}` : "",
-            ]
-              .filter(Boolean)
-              .join(" ")
+          ? storedRun.subject
+            ? `Request: ${storedRun.subject}`
+            : "Inbound quote request"
           : "Paste a broker email, attach one census per billing group, and generate a Loomis GAP proposal."}
       </p>
 
@@ -555,12 +572,12 @@ function EntityNamePicker({
   group: AnalyzedGroup;
   onConfirm: (name: string) => void;
 }) {
-  const [selected, setSelected] = useState(group.proposedName || CUSTOM_NAME);
+  const [selected, setSelected] = useState(group.proposedName || "");
   const [custom, setCustom] = useState(group.proposedName && !group.candidateGroupNames.includes(group.proposedName) ? group.proposedName : "");
   const [editing, setEditing] = useState(!group.nameConfirmed);
 
   useEffect(() => {
-    setSelected(group.proposedName || CUSTOM_NAME);
+    setSelected(group.proposedName || "");
     setEditing(!group.nameConfirmed);
   }, [group.id, group.proposedName, group.nameConfirmed]);
 
@@ -577,20 +594,25 @@ function EntityNamePicker({
     );
   }
 
-  const resolved = selected === CUSTOM_NAME ? custom : selected;
-
   return (
     <div className="rounded-md border border-border bg-muted/30 p-3 space-y-2">
       <p className="text-xs text-muted-foreground">{confidenceLabel(group.nameConfidence, group.proposedName)}</p>
       {group.censusEmployerName && (
         <p className="text-xs text-muted-foreground">Census field: {group.censusEmployerName}</p>
       )}
-      <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <select
           className={SELECT_CLASS}
           value={selected}
-          onChange={(e) => setSelected(e.target.value)}
+          onChange={(e) => {
+            const value = e.target.value;
+            setSelected(value);
+            if (value && value !== CUSTOM_NAME) onConfirm(value);
+          }}
         >
+          <option value="" disabled>
+            Select an entity
+          </option>
           {group.candidateGroupNames.map((name) => (
             <option key={name} value={name}>
               {name}
@@ -602,12 +624,15 @@ function EntityNamePicker({
           <Input
             value={custom}
             onChange={(e) => setCustom(e.target.value)}
+            onBlur={() => {
+              if (custom.trim()) onConfirm(custom);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && custom.trim()) onConfirm(custom);
+            }}
             placeholder="Employer / group name"
           />
         )}
-        <Button type="button" size="sm" onClick={() => onConfirm(resolved)} disabled={!resolved.trim()}>
-          Confirm
-        </Button>
       </div>
     </div>
   );
@@ -678,14 +703,14 @@ function ResultCard({
         </div>
         <div className="flex flex-wrap gap-2 mt-4">
           <Button onClick={onSeeProposal} disabled={!group.nameConfirmed}>
-            See Proposal
+            Edit Proposal
           </Button>
           <Button variant="outline" onClick={onDownload} disabled={!group.nameConfirmed || downloading}>
             {downloading ? "Preparing PDF…" : "Download Proposal PDF"}
           </Button>
         </div>
         {!group.nameConfirmed && (
-          <p className="text-xs text-muted-foreground mt-2">Confirm the entity name before reviewing or exporting the proposal.</p>
+          <p className="text-xs text-muted-foreground mt-2">Pick an entity name to review or export the proposal.</p>
         )}
       </CardContent>
     </Card>
@@ -725,7 +750,7 @@ function ProposalModal({
       <div className="my-8 w-full max-w-4xl rounded-xl border border-line bg-white">
         <div className="flex items-center justify-between border-b border-line px-4 py-3">
           <div>
-            <h2 className="text-ink">See Proposal</h2>
+            <h2 className="text-ink">Edit Proposal</h2>
             <p className="text-xs text-muted-foreground mt-1">{group.fileName}</p>
           </div>
           <Button variant="ghost" size="sm" onClick={onClose}>
