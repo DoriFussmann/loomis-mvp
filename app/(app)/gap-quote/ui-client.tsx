@@ -133,6 +133,17 @@ export function GapQuoteClient({ storedRun }: { storedRun?: GapQuoteStoredRun })
   const [revealedTiers, setRevealedTiers] = useState(0);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [reviewGroupId, setReviewGroupId] = useState<string | null>(null);
+  const [dirtyIds, setDirtyIds] = useState<Record<string, boolean>>({});
+  const [justSavedIds, setJustSavedIds] = useState<Record<string, boolean>>({});
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const savedFlashTimers = useRef<Record<string, number>>({});
+
+  useEffect(() => {
+    const timers = savedFlashTimers.current;
+    return () => {
+      Object.values(timers).forEach((timer) => window.clearTimeout(timer));
+    };
+  }, []);
 
   const passing = result?.groups.filter((group) => group.passed) ?? [];
   const excluded = result?.groups.filter((group) => !group.passed) ?? [];
@@ -191,24 +202,40 @@ export function GapQuoteClient({ storedRun }: { storedRun?: GapQuoteStoredRun })
     };
   }
 
-  function persistRun(next: AnalyzeGapQuoteResult) {
-    if (!storedRun) return Promise.resolve();
+  async function persistRun(next: AnalyzeGapQuoteResult): Promise<boolean> {
+    if (!storedRun) return false;
     setPersistError("");
-    return (async () => {
-      try {
-        const response = await fetch(`/api/gap-quote/runs/${storedRun.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ result: next }),
-        });
-        const json = await response.json();
-        if (!json.success) {
-          setPersistError(json.error ?? "Could not save changes.");
-        }
-      } catch (err) {
-        setPersistError(err instanceof Error ? err.message : "Could not save changes.");
+    try {
+      const response = await fetch(`/api/gap-quote/runs/${storedRun.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ result: next }),
+      });
+      const json = await response.json();
+      if (!json.success) {
+        setPersistError(json.error ?? "Could not save changes.");
+        return false;
       }
-    })();
+      return true;
+    } catch (err) {
+      setPersistError(err instanceof Error ? err.message : "Could not save changes.");
+      return false;
+    }
+  }
+
+  function markDirty(id: string) {
+    setDirtyIds((prev) => ({ ...prev, [id]: true }));
+    setJustSavedIds((prev) => ({ ...prev, [id]: false }));
+  }
+
+  function markSaved(id: string) {
+    setDirtyIds((prev) => ({ ...prev, [id]: false }));
+    setJustSavedIds((prev) => ({ ...prev, [id]: true }));
+    const existing = savedFlashTimers.current[id];
+    if (existing) window.clearTimeout(existing);
+    savedFlashTimers.current[id] = window.setTimeout(() => {
+      setJustSavedIds((prev) => ({ ...prev, [id]: false }));
+    }, 2000);
   }
 
   const didPersistResolved = useRef(false);
@@ -226,7 +253,18 @@ export function GapQuoteClient({ storedRun }: { storedRun?: GapQuoteStoredRun })
     if (!result) return;
     const next = applyGroupPatch(result, id, patch);
     setResult(next);
-    void persistRun(next);
+    if (storedRun) markDirty(id);
+  }
+
+  async function saveGroup(id: string, patch?: Partial<AnalyzedGroup>): Promise<boolean> {
+    if (!result || !storedRun) return false;
+    const next = patch ? applyGroupPatch(result, id, patch) : result;
+    setResult(next);
+    setSavingId(id);
+    const ok = await persistRun(next);
+    setSavingId(null);
+    if (ok) markSaved(id);
+    return ok;
   }
 
   function confirmEntityName(id: string, name: string) {
@@ -498,9 +536,14 @@ export function GapQuoteClient({ storedRun }: { storedRun?: GapQuoteStoredRun })
             <ResultCard
               key={group.id}
               group={group}
+              persistEnabled={Boolean(storedRun)}
+              dirty={Boolean(dirtyIds[group.id])}
+              justSaved={Boolean(justSavedIds[group.id])}
+              saving={savingId === group.id}
               downloading={downloadingId === group.fileName}
               onConfirmName={(name) => confirmEntityName(group.id, name)}
               onSeeProposal={() => setReviewGroupId(group.id)}
+              onSave={() => saveGroup(group.id)}
               onDownload={() => group.priced && downloadPdf(group.priced, group.fileName)}
             />
           ))}
@@ -538,10 +581,23 @@ export function GapQuoteClient({ storedRun }: { storedRun?: GapQuoteStoredRun })
 
       {reviewGroup?.priced && (
         <ProposalModal
+          key={reviewGroup.id}
           group={reviewGroup}
+          persistEnabled={Boolean(storedRun)}
+          dirty={Boolean(dirtyIds[reviewGroup.id])}
+          justSaved={Boolean(justSavedIds[reviewGroup.id])}
+          saving={savingId === reviewGroup.id}
           downloading={downloadingId === reviewGroup.fileName}
           onClose={() => setReviewGroupId(null)}
-          onSave={(priced) => {
+          onSave={async (priced) => {
+            if (storedRun) {
+              await saveGroup(reviewGroup.id, {
+                employerName: priced.employerName,
+                nameConfirmed: true,
+                priced,
+              });
+              return;
+            }
             saveProposal(reviewGroup.id, priced);
             setReviewGroupId(null);
           }}
@@ -659,15 +715,25 @@ function TierGrid({ group }: { group: AnalyzedGroup }) {
 
 function ResultCard({
   group,
+  persistEnabled,
+  dirty,
+  justSaved,
+  saving,
   downloading,
   onConfirmName,
   onSeeProposal,
+  onSave,
   onDownload,
 }: {
   group: AnalyzedGroup;
+  persistEnabled: boolean;
+  dirty: boolean;
+  justSaved: boolean;
+  saving: boolean;
   downloading: boolean;
   onConfirmName: (name: string) => void;
   onSeeProposal: () => void;
+  onSave: () => void;
   onDownload: () => void;
 }) {
   const priced: PricedGroup | null = group.priced;
@@ -679,6 +745,8 @@ function ResultCard({
     ["Employee + Child(ren)", rates.eeChildren],
     ["Family", rates.family],
   ] as const;
+  const downloadBlocked = persistEnabled && dirty;
+  const saveLabel = saving ? "Saving…" : justSaved ? "Saved" : "Save";
 
   return (
     <Card>
@@ -701,13 +769,33 @@ function ResultCard({
           ))}
           <p className="text-xs text-muted-foreground pt-1">{ADMIN_FEE_FOOTNOTE}</p>
         </div>
-        <div className="flex flex-wrap gap-2 mt-4">
+        {persistEnabled && dirty && (
+          <p className="text-xs text-ink mt-4">You have unsaved changes</p>
+        )}
+        <div className="flex flex-wrap items-center gap-2 mt-4">
           <Button onClick={onSeeProposal} disabled={!group.nameConfirmed}>
             Edit Proposal
           </Button>
-          <Button variant="outline" onClick={onDownload} disabled={!group.nameConfirmed || downloading}>
+          {persistEnabled && (
+            <Button
+              className="border-check bg-check text-white hover:bg-check hover:text-white"
+              onClick={onSave}
+              disabled={!group.nameConfirmed || saving}
+            >
+              {saveLabel}
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            onClick={onDownload}
+            disabled={!group.nameConfirmed || downloading || downloadBlocked}
+            title={downloadBlocked ? "Save first" : undefined}
+          >
             {downloading ? "Preparing PDF…" : "Download Proposal PDF"}
           </Button>
+          {downloadBlocked && (
+            <span className="text-xs text-muted-foreground">Save first</span>
+          )}
         </div>
         {!group.nameConfirmed && (
           <p className="text-xs text-muted-foreground mt-2">Pick an entity name to review or export the proposal.</p>
@@ -719,31 +807,50 @@ function ResultCard({
 
 function ProposalModal({
   group,
+  persistEnabled,
+  dirty,
+  justSaved,
+  saving,
   downloading,
   onClose,
   onSave,
   onDownload,
 }: {
   group: AnalyzedGroup;
+  persistEnabled: boolean;
+  dirty: boolean;
+  justSaved: boolean;
+  saving: boolean;
   downloading: boolean;
   onClose: () => void;
-  onSave: (priced: PricedGroup) => void;
+  onSave: (priced: PricedGroup) => void | Promise<void>;
   onDownload: (priced: PricedGroup) => void;
 }) {
   const source = group.priced;
   const [draft, setDraft] = useState<PricedGroup | null>(source ? { ...source, baseRates: { ...source.baseRates } } : null);
+  const [draftDirty, setDraftDirty] = useState(false);
+
+  useEffect(() => {
+    if (justSaved) setDraftDirty(false);
+  }, [justSaved]);
 
   if (!draft) return null;
 
   function setField<K extends keyof PricedGroup>(key: K, value: PricedGroup[K]) {
     setDraft((prev) => (prev ? { ...prev, [key]: value } : prev));
+    setDraftDirty(true);
   }
 
   function setDisplayRate(key: keyof PricedGroup["baseRates"], value: number) {
     setDraft((prev) =>
       prev ? { ...prev, baseRates: { ...prev.baseRates, [key]: value - prev.adminFee } } : prev
     );
+    setDraftDirty(true);
   }
+
+  const unsaved = persistEnabled && (dirty || draftDirty);
+  const downloadBlocked = persistEnabled && unsaved;
+  const saveLabel = saving ? "Saving…" : justSaved && !draftDirty ? "Saved" : "Save";
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-foreground/20 p-6">
@@ -797,13 +904,30 @@ function ProposalModal({
           />
         </div>
         <p className="text-xs text-muted-foreground px-6 -mt-1 pb-2">{ADMIN_FEE_FOOTNOTE}</p>
-        <div className="flex flex-wrap gap-2 border-t border-border px-6 py-4">
-          <Button onClick={() => onSave(draft)}>Save</Button>
-          <Button variant="outline" onClick={() => onDownload(draft)} disabled={downloading}>
+        {persistEnabled && unsaved && (
+          <p className="text-xs text-ink px-6 pb-2">You have unsaved changes</p>
+        )}
+        <div className="flex flex-wrap items-center gap-2 border-t border-border px-6 py-4">
+          <Button
+            className={persistEnabled ? "border-check bg-check text-white hover:bg-check hover:text-white" : undefined}
+            onClick={() => onSave(draft)}
+            disabled={saving}
+          >
+            {saveLabel}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => onDownload(draft)}
+            disabled={downloading || downloadBlocked}
+            title={downloadBlocked ? "Save first" : undefined}
+          >
             {downloading ? "Preparing PDF…" : "Download Proposal PDF"}
           </Button>
+          {downloadBlocked && (
+            <span className="text-xs text-muted-foreground">Save first</span>
+          )}
           <Button variant="ghost" onClick={onClose}>
-            Cancel
+            {persistEnabled ? "Close" : "Cancel"}
           </Button>
         </div>
       </div>
